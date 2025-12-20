@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mi App en Render</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: inline-block; }
+        button { background-color: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>¡Conexión Exitosa!</h1>
+        <p>Esta página está hablando con el backend en Python.</p>
+        <button onclick="saludar()">Presionar para probar Backend</button>
+        <p id="respuesta"></p>
+    </div>
+
+    <script>
+        async function saludar() {
+            const res = await fetch('/api/mensaje');
+            const data = await res.json();
+            document.getElementById('respuesta').innerText = data.mensaje;
+        }
+    </script>
+</body>
+</html>
