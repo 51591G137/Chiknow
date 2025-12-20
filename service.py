@@ -11,24 +11,25 @@ def agregar_palabra_y_generar_tarjetas(db: Session, hsk_id: int):
     entrada_dict = repository.create_diccionario_entry(db, hsk_id)
     
     # 2. Definir las 6 reglas según la especificación
+    # IMPORTANTE: El último parámetro es el valor REAL que debe aparecer como respuesta
     reglas = [
-        # 1: Hanzi + Pinyin (audio) -> Español
-        (palabra.hanzi, palabra.pinyin, True, "Español"),
+        # 1: Hanzi + Pinyin (audio) -> Español (valor real)
+        (palabra.hanzi, palabra.pinyin, True, palabra.espanol),
         
-        # 2: Hanzi (sin audio) -> Español
-        (palabra.hanzi, "", False, "Español"),
+        # 2: Hanzi (sin audio) -> Español (valor real)
+        (palabra.hanzi, "", False, palabra.espanol),
         
-        # 3: Audio solo -> Español
-        ("", "", True, "Español"),
+        # 3: Audio solo -> Español (valor real)
+        ("", "", True, palabra.espanol),
         
-        # 4: Español + Pinyin (audio) -> Hanzi
-        (palabra.espanol, palabra.pinyin, True, "Hanzi"),
+        # 4: Español + Pinyin (audio) -> Hanzi (valor real)
+        (palabra.espanol, palabra.pinyin, True, palabra.hanzi),
         
-        # 5: Español (audio) -> Hanzi
-        (palabra.espanol, "", True, "Hanzi"),
+        # 5: Español (audio) -> Hanzi (valor real)
+        (palabra.espanol, "", True, palabra.hanzi),
         
-        # 6: Español (sin audio) -> Hanzi
-        (palabra.espanol, "", False, "Hanzi"),
+        # 6: Español (sin audio) -> Hanzi (valor real)
+        (palabra.espanol, "", False, palabra.hanzi),
     ]
     
     # 3. Aplicar reglas y crear progreso inicial para cada tarjeta
