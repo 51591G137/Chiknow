@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiknow - Mi Diccionario</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>🔍 Mi Diccionario</h1>
+        <p class="subtitle">Palabras seleccionadas para estudio</p>
+    </header>
+
+    <main id="content">
+        <section id="diccionario-section">
+            <div class="section-header">
+                <h2>Mis Palabras</h2>
+                <div class="stats">
+                    <span class="stat-item">Total: <strong id="total-palabras">0</strong></span>
+                </div>
+            </div>
+            <div id="lista-diccionario"></div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="/" class="nav-item">
+            <span>📚</span>
+            <span class="nav-label">HSK</span>
+        </a>
+        <a href="/diccionario" class="nav-item active">
+            <span>🔍</span>
+            <span class="nav-label">Diccionario</span>
+        </a>
+        <a href="/tarjetas" class="nav-item">
+            <span>🗂️</span>
+            <span class="nav-label">Tarjetas</span>
+        </a>
+        <a href="/sm2" class="nav-item">
+            <span>🧠</span>
+            <span class="nav-label">Estudiar</span>
+        </a>
+    </nav>
+
+    <script>
+        async function cargarDiccionario() {
+            try {
+                const res = await fetch('/api/diccionario');
+                const palabras = await res.json();
+                
+                document.getElementById('total-palabras').textContent = palabras.length;
+                
+                const contenedor = document.getElementById('lista-diccionario');
+                
+                if (palabras.length === 0) {
+                    contenedor.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📖</div>
+                            <h3>Tu diccionario está vacío</h3>
+                            <p>Ve a la lista HSK y añade palabras para empezar a estudiar</p>
+                            <a href="/" class="btn-primary">Ir a Lista HSK</a>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                contenedor.innerHTML = palabras.map(p => `
+                    <div class="card diccionario-card">
+                        <div class="hanzi-lg">${p.hanzi}</div>
+                        <div class="info">
+                            <div class="pinyin">${p.pinyin}</div>
+                            <div class="espanol">${p.espanol}</div>
+                            <div class="numero-nivel">
+                                <span class="numero">#${p.numero}</span>
+                                <span class="nivel">HSK ${p.nivel}</span>
+                                <span class="tarjetas-count">6 tarjetas</span>
+                            </div>
+                        </div>
+                        <button class="btn-remove" onclick="eliminar(${p.hsk_id})" title="Eliminar del diccionario">−</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error al cargar diccionario:', error);
+                document.getElementById('lista-diccionario').innerHTML = 
+                    '<p class="error-message">Error al cargar el diccionario.</p>';
+            }
+        }
+
+        async function eliminar(hskId) {
+            if (!confirm('¿Estás seguro? Se eliminarán también todas las tarjetas de esta palabra.')) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/diccionario/remove/${hskId}`, { 
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    mostrarNotificacion(data.error, 'error');
+                } else {
+                    mostrarNotificacion('✓ Palabra eliminada', 'success');
+                    await cargarDiccionario();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarNotificacion('Error al eliminar', 'error');
+            }
+        }
+
+        function mostrarNotificacion(mensaje, tipo = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notificacion notificacion-${tipo}`;
+            notif.textContent = mensaje;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => notif.classList.add('show'), 10);
+            setTimeout(() => {
+                notif.classList.remove('show');
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
+        }
+
+        window.onload = cargarDiccionario;
+    </script>
+</body>
+</html>

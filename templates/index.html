@@ -3,52 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chiknow - Aprende Chino</title>
+    <title>Chiknow - Lista HSK</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
     <header>
         <h1>🏮 Chiknow</h1>
+        <p class="subtitle">Lista HSK 1 - 汉字学习</p>
     </header>
 
     <main id="content">
         <section id="hsk-section">
-            <h2>Lista HSK 1</h2>
-            <div id="lista-hsk">
+            <div class="section-header">
+                <h2>Vocabulario HSK 1</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">Todas</button>
+                    <button class="filter-btn" data-filter="diccionario">En Diccionario</button>
+                    <button class="filter-btn" data-filter="pendientes">Pendientes</button>
                 </div>
+            </div>
+            <div id="lista-hsk"></div>
         </section>
     </main>
 
     <nav class="bottom-nav">
-        <a href="#" class="nav-item"><span>📚</span>HSK</a>
-        <a href="#" class="nav-item"><span>🔍</span>Diccionario</a>
-        <a href="#" class="nav-item"><span>🗂️</span>Tarjetas</a>
-        <a href="#" class="nav-item"><span>🧠</span>SM2</a>
+        <a href="/" class="nav-item active">
+            <span>📚</span>
+            <span class="nav-label">HSK</span>
+        </a>
+        <a href="/diccionario" class="nav-item">
+            <span>🔍</span>
+            <span class="nav-label">Diccionario</span>
+        </a>
+        <a href="/tarjetas" class="nav-item">
+            <span>🗂️</span>
+            <span class="nav-label">Tarjetas</span>
+        </a>
+        <a href="/sm2" class="nav-item">
+            <span>🧠</span>
+            <span class="nav-label">Estudiar</span>
+        </a>
     </nav>
 
     <script>
+        let todasLasPalabras = [];
+        let filtroActual = 'all';
+
         async function cargarHSK() {
-            const res = await fetch('/api/hsk');
-            const palabras = await res.json();
+            try {
+                const res = await fetch('/api/hsk');
+                todasLasPalabras = await res.json();
+                renderizarPalabras();
+            } catch (error) {
+                console.error('Error al cargar HSK:', error);
+                document.getElementById('lista-hsk').innerHTML = 
+                    '<p class="error-message">Error al cargar las palabras.</p>';
+            }
+        }
+
+        function renderizarPalabras() {
+            const palabrasFiltradas = filtrarPalabras(todasLasPalabras, filtroActual);
             const contenedor = document.getElementById('lista-hsk');
             
-            contenedor.innerHTML = palabras.map(p => `
-                <div class="card">
+            if (palabrasFiltradas.length === 0) {
+                contenedor.innerHTML = '<p class="empty-message">No hay palabras que mostrar.</p>';
+                return;
+            }
+            
+            contenedor.innerHTML = palabrasFiltradas.map(p => `
+                <div class="card ${p.en_diccionario ? 'en-diccionario' : ''}" data-id="${p.id}">
+                    <div class="card-badge">
+                        ${p.en_diccionario ? '<span class="badge-diccionario">✓ En Diccionario</span>' : ''}
+                    </div>
                     <div class="hanzi-lg">${p.hanzi}</div>
                     <div class="info">
                         <div class="pinyin">${p.pinyin}</div>
                         <div class="espanol">${p.espanol}</div>
+                        <div class="numero-nivel">
+                            <span class="numero">#${p.numero}</span>
+                            <span class="nivel">HSK ${p.nivel}</span>
+                        </div>
                     </div>
-                    <button class="btn-add" onclick="agregar(${p.id})">+</button>
+                    ${p.en_diccionario 
+                        ? `<button class="btn-remove" onclick="eliminar(${p.id})" title="Eliminar">−</button>`
+                        : `<button class="btn-add" onclick="agregar(${p.id})" title="Añadir">+</button>`
+                    }
                 </div>
             `).join('');
         }
 
-        async function agregar(id) {
-            const res = await fetch(`/api/diccionario/add/${id}`, { method: 'POST' });
-            if (res.ok) alert('Añadido al mazo de estudio');
+        function filtrarPalabras(palabras, filtro) {
+            switch(filtro) {
+                case 'diccionario':
+                    return palabras.filter(p => p.en_diccionario);
+                case 'pendientes':
+                    return palabras.filter(p => !p.en_diccionario);
+                default:
+                    return palabras;
+            }
         }
+
+        async function agregar(id) {
+            try {
+                const res = await fetch(`/api/diccionario/add/${id}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    mostrarNotificacion(data.error, 'error');
+                } else {
+                    mostrarNotificacion('✓ Añadida (6 tarjetas creadas)', 'success');
+                    await cargarHSK();
+                }
+            } catch (error) {
+                mostrarNotificacion('Error al añadir', 'error');
+            }
+        }
+
+        async function eliminar(id) {
+            if (!confirm('¿Eliminar palabra y sus 6 tarjetas?')) return;
+            
+            try {
+                const res = await fetch(`/api/diccionario/remove/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    mostrarNotificacion(data.error, 'error');
+                } else {
+                    mostrarNotificacion('✓ Eliminada', 'success');
+                    await cargarHSK();
+                }
+            } catch (error) {
+                mostrarNotificacion('Error al eliminar', 'error');
+            }
+        }
+
+        function mostrarNotificacion(mensaje, tipo = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notificacion notificacion-${tipo}`;
+            notif.textContent = mensaje;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => notif.classList.add('show'), 10);
+            setTimeout(() => {
+                notif.classList.remove('show');
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                filtroActual = e.target.dataset.filter;
+                renderizarPalabras();
+            });
+        });
 
         window.onload = cargarHSK;
     </script>

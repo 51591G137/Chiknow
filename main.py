@@ -31,23 +31,75 @@ templates = Jinja2Templates(directory=templates_path)
 
 @app.get("/")
 def home(request: Request):
-    # Pasamos el request necesario para que Jinja2 funcione correctamente
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/diccionario")
+def diccionario_page(request: Request):
+    return templates.TemplateResponse("diccionario.html", {"request": request})
+
+@app.get("/tarjetas")
+def tarjetas_page(request: Request):
+    return templates.TemplateResponse("tarjetas.html", {"request": request})
+
+@app.get("/sm2")
+def sm2_page(request: Request):
+    return templates.TemplateResponse("sm2.html", {"request": request})
 
 # --- RUTAS DE API (BACKEND) ---
 
 @app.get("/api/hsk")
 def api_listar_hsk(db: Session = Depends(database.get_db)):
-    return repository.get_hsk_all(db)
+    """Lista todas las palabras HSK con información de si están en el diccionario"""
+    palabras = repository.get_hsk_all(db)
+    diccionario_ids = repository.get_diccionario_hsk_ids(db)
+    
+    resultado = []
+    for palabra in palabras:
+        resultado.append({
+            "id": palabra.id,
+            "numero": palabra.numero,
+            "nivel": palabra.nivel,
+            "hanzi": palabra.hanzi,
+            "pinyin": palabra.pinyin,
+            "espanol": palabra.espanol,
+            "en_diccionario": palabra.id in diccionario_ids
+        })
+    
+    return resultado
 
 @app.post("/api/diccionario/add/{hsk_id}")
 def api_agregar_diccionario(hsk_id: int, db: Session = Depends(database.get_db)):
+    """Agrega una palabra al diccionario y genera las 6 tarjetas de estudio"""
+    # Verificar si ya está en el diccionario
+    if repository.existe_en_diccionario(db, hsk_id):
+        return {"error": "La palabra ya está en el diccionario"}
+    
     exito = service.agregar_palabra_y_generar_tarjetas(db, hsk_id)
     if not exito:
         return {"error": "No se pudo procesar la palabra"}
-    return {"status": "ok", "message": "Palabra y 8 tarjetas creadas"}
+    
+    return {"status": "ok", "message": "Palabra y 6 tarjetas creadas"}
+
+@app.delete("/api/diccionario/remove/{hsk_id}")
+def api_eliminar_diccionario(hsk_id: int, db: Session = Depends(database.get_db)):
+    """Elimina una palabra del diccionario y todas sus tarjetas asociadas"""
+    exito = service.eliminar_palabra_y_tarjetas(db, hsk_id)
+    if not exito:
+        return {"error": "No se pudo eliminar la palabra"}
+    
+    return {"status": "ok", "message": "Palabra eliminada del diccionario"}
+
+@app.get("/api/diccionario")
+def api_ver_diccionario(db: Session = Depends(database.get_db)):
+    """Lista todas las palabras en el diccionario con su información completa"""
+    return service.obtener_diccionario_completo(db)
 
 @app.get("/api/tarjetas")
 def api_ver_tarjetas(db: Session = Depends(database.get_db)):
-    # Traemos todas las tarjetas generadas
-    return db.query(models.Tarjeta).all()
+    """Lista todas las tarjetas generadas con información de la palabra"""
+    return service.obtener_tarjetas_completas(db)
+
+@app.get("/api/tarjetas/estadisticas")
+def api_estadisticas_tarjetas(db: Session = Depends(database.get_db)):
+    """Obtiene estadísticas sobre las tarjetas"""
+    return service.obtener_estadisticas_tarjetas(db)

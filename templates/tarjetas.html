@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiknow - Tarjetas de Estudio</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>🗂️ Tarjetas de Estudio</h1>
+        <p class="subtitle">Todas las tarjetas generadas</p>
+    </header>
+
+    <main id="content">
+        <section id="tarjetas-section">
+            <div class="section-header">
+                <h2>Mis Tarjetas</h2>
+                <div class="stats">
+                    <span class="stat-item">Total: <strong id="total-tarjetas">0</strong></span>
+                    <span class="stat-item">Palabras: <strong id="total-palabras">0</strong></span>
+                </div>
+            </div>
+            <div id="lista-tarjetas"></div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="/" class="nav-item">
+            <span>📚</span>
+            <span class="nav-label">HSK</span>
+        </a>
+        <a href="/diccionario" class="nav-item">
+            <span>🔍</span>
+            <span class="nav-label">Diccionario</span>
+        </a>
+        <a href="/tarjetas" class="nav-item active">
+            <span>🗂️</span>
+            <span class="nav-label">Tarjetas</span>
+        </a>
+        <a href="/sm2" class="nav-item">
+            <span>🧠</span>
+            <span class="nav-label">Estudiar</span>
+        </a>
+    </nav>
+
+    <script>
+        async function cargarTarjetas() {
+            try {
+                const [resTarjetas, resStats] = await Promise.all([
+                    fetch('/api/tarjetas'),
+                    fetch('/api/tarjetas/estadisticas')
+                ]);
+                
+                const tarjetas = await resTarjetas.json();
+                const stats = await resStats.json();
+                
+                document.getElementById('total-tarjetas').textContent = stats.total_tarjetas;
+                document.getElementById('total-palabras').textContent = stats.total_palabras_diccionario;
+                
+                const contenedor = document.getElementById('lista-tarjetas');
+                
+                if (tarjetas.length === 0) {
+                    contenedor.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🗂️</div>
+                            <h3>No hay tarjetas aún</h3>
+                            <p>Añade palabras al diccionario para generar tarjetas de estudio</p>
+                            <a href="/" class="btn-primary">Ir a Lista HSK</a>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Agrupar tarjetas por palabra
+                const tarjetasPorPalabra = agruparPorPalabra(tarjetas);
+                
+                contenedor.innerHTML = Object.keys(tarjetasPorPalabra).map(hanzi => {
+                    const grupo = tarjetasPorPalabra[hanzi];
+                    const primera = grupo[0];
+                    
+                    return `
+                        <div class="tarjeta-grupo">
+                            <div class="tarjeta-grupo-header">
+                                <div class="hanzi-lg">${primera.hanzi}</div>
+                                <div class="grupo-info">
+                                    <div class="pinyin">${primera.pinyin}</div>
+                                    <div class="espanol">${primera.espanol}</div>
+                                </div>
+                                <span class="tarjetas-badge">${grupo.length} tarjetas</span>
+                            </div>
+                            <div class="tarjeta-grupo-items">
+                                ${grupo.map((t, idx) => `
+                                    <div class="tarjeta-item">
+                                        <div class="tarjeta-numero">#${idx + 1}</div>
+                                        <div class="tarjeta-content">
+                                            <div class="tarjeta-pregunta">
+                                                ${t.mostrado1 ? `<span class="mostrado">${t.mostrado1}</span>` : ''}
+                                                ${t.mostrado2 ? `<span class="mostrado secondary">${t.mostrado2}</span>` : ''}
+                                                ${t.audio ? '<span class="audio-icon">🔊</span>' : ''}
+                                                ${!t.mostrado1 && !t.mostrado2 && t.audio ? '<span class="solo-audio">Solo Audio</span>' : ''}
+                                            </div>
+                                            <div class="tarjeta-respuesta">
+                                                <span class="arrow">→</span>
+                                                <span class="requerido">${t.requerido}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error al cargar tarjetas:', error);
+                document.getElementById('lista-tarjetas').innerHTML = 
+                    '<p class="error-message">Error al cargar las tarjetas.</p>';
+            }
+        }
+
+        function agruparPorPalabra(tarjetas) {
+            return tarjetas.reduce((grupos, tarjeta) => {
+                if (!grupos[tarjeta.hanzi]) {
+                    grupos[tarjeta.hanzi] = [];
+                }
+                grupos[tarjeta.hanzi].push(tarjeta);
+                return grupos;
+            }, {});
+        }
+
+        window.onload = cargarTarjetas;
+    </script>
+</body>
+</html>
