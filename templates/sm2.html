@@ -14,15 +14,128 @@
     </header>
 
     <main id="content">
-        <section id="sm2-section">
-            <div class="empty-state">
-                <div class="empty-icon">🚧</div>
-                <h3>Próximamente</h3>
-                <p>El sistema de repetición espaciada SM2 estará disponible pronto.</p>
-                <p class="info-text">Mientras tanto, puedes:</p>
-                <div class="action-buttons">
-                    <a href="/" class="btn-primary">Añadir más palabras</a>
-                    <a href="/tarjetas" class="btn-secondary">Ver tus tarjetas</a>
+        <!-- Vista de estadísticas y inicio -->
+        <section id="stats-section">
+            <div class="sm2-dashboard">
+                <div class="stat-card">
+                    <div class="stat-number" id="pendientes-hoy">0</div>
+                    <div class="stat-label">Pendientes Hoy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="tarjetas-nuevas">0</div>
+                    <div class="stat-label">Tarjetas Nuevas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="total-estudiadas">0</div>
+                    <div class="stat-label">Total Estudiadas</div>
+                </div>
+            </div>
+            
+            <div class="action-center">
+                <button id="btn-iniciar-estudio" class="btn-large btn-primary">
+                    🚀 Iniciar Sesión de Estudio
+                </button>
+                <button id="btn-ver-progreso" class="btn-large btn-secondary">
+                    📊 Ver Progreso Detallado
+                </button>
+            </div>
+        </section>
+
+        <!-- Vista de estudio (oculta inicialmente) -->
+        <section id="study-section" style="display: none;">
+            <div class="study-header">
+                <div class="study-progress">
+                    <span id="current-card">0</span> / <span id="total-cards">0</span>
+                </div>
+                <button id="btn-salir-estudio" class="btn-small btn-secondary">Salir</button>
+            </div>
+
+            <div class="flashcard">
+                <div class="flashcard-front" id="flashcard-front">
+                    <div class="card-content">
+                        <div id="mostrado1" class="display-text"></div>
+                        <div id="mostrado2" class="display-text secondary"></div>
+                        <button id="btn-audio" class="btn-audio-large" style="display: none;">🔊 Reproducir</button>
+                    </div>
+                </div>
+
+                <div class="flashcard-back" id="flashcard-back" style="display: none;">
+                    <div class="card-answer">
+                        <h3>Respuesta:</h3>
+                        <div id="answer-text" class="answer-display"></div>
+                    </div>
+                    
+                    <div class="quality-buttons">
+                        <p class="quality-label">¿Qué tan bien lo recordaste?</p>
+                        <div class="quality-grid">
+                            <button class="quality-btn q0" onclick="responder(0)">
+                                <span class="q-emoji">😵</span>
+                                <span class="q-text">No recordé</span>
+                            </button>
+                            <button class="quality-btn q1" onclick="responder(1)">
+                                <span class="q-emoji">😟</span>
+                                <span class="q-text">Muy difícil</span>
+                            </button>
+                            <button class="quality-btn q2" onclick="responder(2)">
+                                <span class="q-emoji">😐</span>
+                                <span class="q-text">Difícil</span>
+                            </button>
+                            <button class="quality-btn q3" onclick="responder(3)">
+                                <span class="q-emoji">🙂</span>
+                                <span class="q-text">Bien</span>
+                            </button>
+                            <button class="quality-btn q4" onclick="responder(4)">
+                                <span class="q-emoji">😊</span>
+                                <span class="q-text">Fácil</span>
+                            </button>
+                            <button class="quality-btn q5" onclick="responder(5)">
+                                <span class="q-emoji">😄</span>
+                                <span class="q-text">Muy fácil</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flip-button-container">
+                <button id="btn-voltear" class="btn-flip">Mostrar Respuesta</button>
+            </div>
+        </section>
+
+        <!-- Vista de progreso (oculta inicialmente) -->
+        <section id="progress-section" style="display: none;">
+            <div class="progress-header">
+                <h2>Progreso Detallado</h2>
+                <button id="btn-volver-stats" class="btn-secondary">← Volver</button>
+            </div>
+            <div id="progress-list"></div>
+        </section>
+
+        <!-- Resultado de sesión (oculto inicialmente) -->
+        <section id="result-section" style="display: none;">
+            <div class="result-card">
+                <h2>🎉 ¡Sesión Completada!</h2>
+                <div class="result-stats">
+                    <div class="result-item">
+                        <span class="result-label">Tarjetas estudiadas:</span>
+                        <span class="result-value" id="result-total">0</span>
+                    </div>
+                    <div class="result-item success">
+                        <span class="result-label">Correctas (≥3):</span>
+                        <span class="result-value" id="result-correctas">0</span>
+                    </div>
+                    <div class="result-item error">
+                        <span class="result-label">Incorrectas (<3):</span>
+                        <span class="result-value" id="result-incorrectas">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Porcentaje de acierto:</span>
+                        <span class="result-value" id="result-porcentaje">0%</span>
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button id="btn-nueva-sesion" class="btn-primary">Nueva Sesión</button>
+                    <button id="btn-volver-inicio" class="btn-secondary">Volver al Inicio</button>
                 </div>
             </div>
         </section>
@@ -30,11 +143,11 @@
 
     <nav class="bottom-nav">
         <a href="/" class="nav-item">
-            <span>📚</span>
+            <span class="nav-icon">3.0</span>
             <span class="nav-label">HSK</span>
         </a>
         <a href="/diccionario" class="nav-item">
-            <span>🔍</span>
+            <span class="nav-icon">📖</span>
             <span class="nav-label">Diccionario</span>
         </a>
         <a href="/tarjetas" class="nav-item">
@@ -46,5 +159,257 @@
             <span class="nav-label">Estudiar</span>
         </a>
     </nav>
+
+    <script>
+        let sessionId = null;
+        let tarjetasEstudio = [];
+        let indiceActual = 0;
+        let tarjetaActual = null;
+        let mostrandoRespuesta = false;
+
+        async function cargarEstadisticas() {
+            try {
+                const res = await fetch('/api/sm2/statistics');
+                const stats = await res.json();
+                
+                document.getElementById('pendientes-hoy').textContent = stats.tarjetas_pendientes_hoy;
+                document.getElementById('tarjetas-nuevas').textContent = stats.tarjetas_nuevas;
+                document.getElementById('total-estudiadas').textContent = stats.tarjetas_estudiadas;
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+            }
+        }
+
+        async function iniciarSesion() {
+            try {
+                // Crear sesión
+                const resSession = await fetch('/api/sm2/session/start', { method: 'POST' });
+                const sessionData = await resSession.json();
+                sessionId = sessionData.session_id;
+                
+                // Obtener tarjetas pendientes
+                const resTarjetas = await fetch('/api/sm2/cards/due?limite=20');
+                tarjetasEstudio = await resTarjetas.json();
+                
+                if (tarjetasEstudio.length === 0) {
+                    mostrarNotificacion('¡No hay tarjetas pendientes! Añade más palabras al diccionario.', 'info');
+                    return;
+                }
+                
+                // Cambiar a vista de estudio
+                mostrarSeccion('study');
+                indiceActual = 0;
+                mostrarTarjeta();
+            } catch (error) {
+                console.error('Error al iniciar sesión:', error);
+                mostrarNotificacion('Error al iniciar sesión de estudio', 'error');
+            }
+        }
+
+        function mostrarTarjeta() {
+            if (indiceActual >= tarjetasEstudio.length) {
+                finalizarSesion();
+                return;
+            }
+            
+            tarjetaActual = tarjetasEstudio[indiceActual];
+            mostrandoRespuesta = false;
+            
+            // Actualizar progreso
+            document.getElementById('current-card').textContent = indiceActual + 1;
+            document.getElementById('total-cards').textContent = tarjetasEstudio.length;
+            
+            // Mostrar contenido de la tarjeta
+            const mostrado1 = document.getElementById('mostrado1');
+            const mostrado2 = document.getElementById('mostrado2');
+            const btnAudio = document.getElementById('btn-audio');
+            
+            mostrado1.textContent = tarjetaActual.mostrado1 || '';
+            mostrado1.style.display = tarjetaActual.mostrado1 ? 'block' : 'none';
+            
+            mostrado2.textContent = tarjetaActual.mostrado2 || '';
+            mostrado2.style.display = tarjetaActual.mostrado2 ? 'block' : 'none';
+            
+            btnAudio.style.display = tarjetaActual.audio ? 'block' : 'none';
+            
+            // Si solo hay audio, reproducirlo automáticamente
+            if (tarjetaActual.audio && !tarjetaActual.mostrado1 && !tarjetaActual.mostrado2) {
+                setTimeout(() => reproducirAudio(tarjetaActual.hanzi), 500);
+            }
+            
+            // Mostrar frente, ocultar respuesta
+            document.getElementById('flashcard-front').style.display = 'block';
+            document.getElementById('flashcard-back').style.display = 'none';
+            document.getElementById('btn-voltear').style.display = 'block';
+        }
+
+        function voltearTarjeta() {
+            if (mostrandoRespuesta) return;
+            
+            mostrandoRespuesta = true;
+            document.getElementById('answer-text').textContent = tarjetaActual.requerido;
+            document.getElementById('flashcard-front').style.display = 'none';
+            document.getElementById('flashcard-back').style.display = 'block';
+            document.getElementById('btn-voltear').style.display = 'none';
+        }
+
+        async function responder(quality) {
+            try {
+                const res = await fetch('/api/sm2/review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tarjeta_id: tarjetaActual.tarjeta_id,
+                        session_id: sessionId,
+                        quality: quality
+                    })
+                });
+                
+                const resultado = await res.json();
+                
+                // Mostrar feedback breve
+                const mensaje = resultado.es_correcta 
+                    ? '✓ ¡Bien! Próxima revisión en ' + resultado.nuevo_intervalo + ' días'
+                    : '✗ Necesita más práctica';
+                mostrarNotificacion(mensaje, resultado.es_correcta ? 'success' : 'warning');
+                
+                // Siguiente tarjeta
+                indiceActual++;
+                setTimeout(mostrarTarjeta, 300);
+            } catch (error) {
+                console.error('Error al procesar respuesta:', error);
+                mostrarNotificacion('Error al procesar respuesta', 'error');
+            }
+        }
+
+        async function finalizarSesion() {
+            try {
+                const res = await fetch(`/api/sm2/session/end/${sessionId}`, { method: 'POST' });
+                const resultado = await res.json();
+                
+                // Mostrar resultados
+                document.getElementById('result-total').textContent = resultado.tarjetas_estudiadas;
+                document.getElementById('result-correctas').textContent = resultado.correctas;
+                document.getElementById('result-incorrectas').textContent = resultado.incorrectas;
+                document.getElementById('result-porcentaje').textContent = resultado.porcentaje_acierto + '%';
+                
+                mostrarSeccion('result');
+            } catch (error) {
+                console.error('Error al finalizar sesión:', error);
+            }
+        }
+
+        async function verProgreso() {
+            try {
+                const res = await fetch('/api/sm2/progress');
+                const progreso = await res.json();
+                
+                const contenedor = document.getElementById('progress-list');
+                
+                if (progreso.length === 0) {
+                    contenedor.innerHTML = '<p class="empty-message">No hay progreso aún</p>';
+                } else {
+                    contenedor.innerHTML = progreso.map(p => `
+                        <div class="progress-card">
+                            <div class="progress-header">
+                                <span class="progress-hanzi">${p.hanzi}</span>
+                                <span class="progress-pinyin">${p.pinyin}</span>
+                            </div>
+                            <div class="progress-details">
+                                <div class="progress-stat">
+                                    <span class="label">Facilidad:</span>
+                                    <span class="value">${p.facilidad}</span>
+                                </div>
+                                <div class="progress-stat">
+                                    <span class="label">Repeticiones:</span>
+                                    <span class="value">${p.repeticiones}</span>
+                                </div>
+                                <div class="progress-stat">
+                                    <span class="label">Intervalo:</span>
+                                    <span class="value">${p.intervalo_dias} días</span>
+                                </div>
+                                <div class="progress-stat">
+                                    <span class="label">Tasa de acierto:</span>
+                                    <span class="value success">${p.tasa_acierto}%</span>
+                                </div>
+                            </div>
+                            <div class="progress-footer">
+                                <span class="next-review">Próxima: ${formatearFecha(p.proxima_revision)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                mostrarSeccion('progress');
+            } catch (error) {
+                console.error('Error al cargar progreso:', error);
+            }
+        }
+
+        function mostrarSeccion(seccion) {
+            document.getElementById('stats-section').style.display = seccion === 'stats' ? 'block' : 'none';
+            document.getElementById('study-section').style.display = seccion === 'study' ? 'block' : 'none';
+            document.getElementById('progress-section').style.display = seccion === 'progress' ? 'block' : 'none';
+            document.getElementById('result-section').style.display = seccion === 'result' ? 'block' : 'none';
+        }
+
+        function reproducirAudio(texto) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.8;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function formatearFecha(isoString) {
+            const fecha = new Date(isoString);
+            const ahora = new Date();
+            const diff = Math.ceil((fecha - ahora) / (1000 * 60 * 60 * 24));
+            
+            if (diff < 0) return 'Vencida';
+            if (diff === 0) return 'Hoy';
+            if (diff === 1) return 'Mañana';
+            return `En ${diff} días`;
+        }
+
+        function mostrarNotificacion(mensaje, tipo = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notificacion notificacion-${tipo}`;
+            notif.textContent = mensaje;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => notif.classList.add('show'), 10);
+            setTimeout(() => {
+                notif.classList.remove('show');
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-iniciar-estudio').addEventListener('click', iniciarSesion);
+            document.getElementById('btn-ver-progreso').addEventListener('click', verProgreso);
+            document.getElementById('btn-voltear').addEventListener('click', voltearTarjeta);
+            document.getElementById('btn-audio').addEventListener('click', () => reproducirAudio(tarjetaActual.hanzi));
+            document.getElementById('btn-salir-estudio').addEventListener('click', () => {
+                if (confirm('¿Salir de la sesión? El progreso se guardará.')) {
+                    if (sessionId) finalizarSesion();
+                    else mostrarSeccion('stats');
+                }
+            });
+            document.getElementById('btn-volver-stats').addEventListener('click', () => mostrarSeccion('stats'));
+            document.getElementById('btn-nueva-sesion').addEventListener('click', () => {
+                mostrarSeccion('stats');
+                cargarEstadisticas();
+            });
+            document.getElementById('btn-volver-inicio').addEventListener('click', () => {
+                mostrarSeccion('stats');
+                cargarEstadisticas();
+            });
+        });
+
+        window.onload = cargarEstadisticas;
+    </script>
 </body>
 </html>

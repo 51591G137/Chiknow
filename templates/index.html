@@ -17,10 +17,16 @@
         <section id="hsk-section">
             <div class="section-header">
                 <h2>Vocabulario HSK 1</h2>
-                <div class="filter-buttons">
-                    <button class="filter-btn active" data-filter="all">Todas</button>
-                    <button class="filter-btn" data-filter="diccionario">En Diccionario</button>
-                    <button class="filter-btn" data-filter="pendientes">Pendientes</button>
+                <div class="search-and-filters">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Buscar por hanzi, pinyin o español...">
+                        <button id="search-btn" class="search-button">🔍</button>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">Todas</button>
+                        <button class="filter-btn" data-filter="diccionario">En Diccionario</button>
+                        <button class="filter-btn" data-filter="pendientes">Pendientes</button>
+                    </div>
                 </div>
             </div>
             <div id="lista-hsk"></div>
@@ -29,11 +35,11 @@
 
     <nav class="bottom-nav">
         <a href="/" class="nav-item active">
-            <span>📚</span>
+            <span class="nav-icon">3.0</span>
             <span class="nav-label">HSK</span>
         </a>
         <a href="/diccionario" class="nav-item">
-            <span>🔍</span>
+            <span class="nav-icon">📖</span>
             <span class="nav-label">Diccionario</span>
         </a>
         <a href="/tarjetas" class="nav-item">
@@ -49,6 +55,7 @@
     <script>
         let todasLasPalabras = [];
         let filtroActual = 'all';
+        let searchQuery = '';
 
         async function cargarHSK() {
             try {
@@ -59,6 +66,17 @@
                 console.error('Error al cargar HSK:', error);
                 document.getElementById('lista-hsk').innerHTML = 
                     '<p class="error-message">Error al cargar las palabras.</p>';
+            }
+        }
+
+        async function buscarPalabras(query) {
+            try {
+                const url = query ? `/api/hsk/search?query=${encodeURIComponent(query)}` : '/api/hsk';
+                const res = await fetch(url);
+                todasLasPalabras = await res.json();
+                renderizarPalabras();
+            } catch (error) {
+                console.error('Error al buscar:', error);
             }
         }
 
@@ -76,7 +94,10 @@
                     <div class="card-badge">
                         ${p.en_diccionario ? '<span class="badge-diccionario">✓ En Diccionario</span>' : ''}
                     </div>
-                    <div class="hanzi-lg">${p.hanzi}</div>
+                    <div class="card-main-content">
+                        <div class="hanzi-lg">${p.hanzi}</div>
+                        <button class="btn-audio" onclick="reproducirAudio('${p.hanzi}')" title="Reproducir audio">🔊</button>
+                    </div>
                     <div class="info">
                         <div class="pinyin">${p.pinyin}</div>
                         <div class="espanol">${p.espanol}</div>
@@ -101,6 +122,18 @@
                     return palabras.filter(p => !p.en_diccionario);
                 default:
                     return palabras;
+            }
+        }
+
+        function reproducirAudio(texto) {
+            // Usamos la API de Text-to-Speech del navegador
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'zh-CN'; // Chino mandarín
+                utterance.rate = 0.8; // Velocidad más lenta para mejor comprensión
+                window.speechSynthesis.speak(utterance);
+            } else {
+                mostrarNotificacion('Tu navegador no soporta síntesis de voz', 'error');
             }
         }
 
@@ -151,12 +184,30 @@
             }, 3000);
         }
 
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                filtroActual = e.target.dataset.filter;
-                renderizarPalabras();
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('search-input');
+            const searchBtn = document.getElementById('search-btn');
+            
+            searchBtn.addEventListener('click', () => {
+                searchQuery = searchInput.value.trim();
+                buscarPalabras(searchQuery);
+            });
+            
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchQuery = searchInput.value.trim();
+                    buscarPalabras(searchQuery);
+                }
+            });
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    filtroActual = e.target.dataset.filter;
+                    renderizarPalabras();
+                });
             });
         });
 

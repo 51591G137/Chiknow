@@ -9,7 +9,7 @@
 <body>
 
     <header>
-        <h1>🔍 Mi Diccionario</h1>
+        <h1>📖 Mi Diccionario</h1>
         <p class="subtitle">Palabras seleccionadas para estudio</p>
     </header>
 
@@ -17,8 +17,14 @@
         <section id="diccionario-section">
             <div class="section-header">
                 <h2>Mis Palabras</h2>
-                <div class="stats">
-                    <span class="stat-item">Total: <strong id="total-palabras">0</strong></span>
+                <div class="search-and-stats">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Buscar...">
+                        <button id="search-btn" class="search-button">🔍</button>
+                    </div>
+                    <div class="stats">
+                        <span class="stat-item">Total: <strong id="total-palabras">0</strong></span>
+                    </div>
                 </div>
             </div>
             <div id="lista-diccionario"></div>
@@ -27,11 +33,11 @@
 
     <nav class="bottom-nav">
         <a href="/" class="nav-item">
-            <span>📚</span>
+            <span class="nav-icon">3.0</span>
             <span class="nav-label">HSK</span>
         </a>
         <a href="/diccionario" class="nav-item active">
-            <span>🔍</span>
+            <span class="nav-icon">📖</span>
             <span class="nav-label">Diccionario</span>
         </a>
         <a href="/tarjetas" class="nav-item">
@@ -45,16 +51,49 @@
     </nav>
 
     <script>
+        let todasLasPalabras = [];
+
         async function cargarDiccionario() {
             try {
                 const res = await fetch('/api/diccionario');
+                todasLasPalabras = await res.json();
+                renderizarDiccionario(todasLasPalabras);
+            } catch (error) {
+                console.error('Error al cargar diccionario:', error);
+                document.getElementById('lista-diccionario').innerHTML = 
+                    '<p class="error-message">Error al cargar el diccionario.</p>';
+            }
+        }
+
+        async function buscarEnDiccionario(query) {
+            try {
+                const url = query ? `/api/diccionario/search?query=${encodeURIComponent(query)}` : '/api/diccionario';
+                const res = await fetch(url);
                 const palabras = await res.json();
+                renderizarDiccionario(palabras);
+            } catch (error) {
+                console.error('Error al buscar:', error);
+            }
+        }
+
+        function renderizarDiccionario(palabras) {
+            document.getElementById('total-palabras').textContent = palabras.length;
+            
+            const contenedor = document.getElementById('lista-diccionario');
+            
+            if (palabras.length === 0) {
+                const searchInput = document.getElementById('search-input');
+                const hayBusqueda = searchInput && searchInput.value.trim() !== '';
                 
-                document.getElementById('total-palabras').textContent = palabras.length;
-                
-                const contenedor = document.getElementById('lista-diccionario');
-                
-                if (palabras.length === 0) {
+                if (hayBusqueda) {
+                    contenedor.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🔍</div>
+                            <h3>No se encontraron resultados</h3>
+                            <p>Intenta con otra búsqueda</p>
+                        </div>
+                    `;
+                } else {
                     contenedor.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-icon">📖</div>
@@ -63,28 +102,38 @@
                             <a href="/" class="btn-primary">Ir a Lista HSK</a>
                         </div>
                     `;
-                    return;
                 }
-                
-                contenedor.innerHTML = palabras.map(p => `
-                    <div class="card diccionario-card">
+                return;
+            }
+            
+            contenedor.innerHTML = palabras.map(p => `
+                <div class="card diccionario-card">
+                    <div class="card-main-content">
                         <div class="hanzi-lg">${p.hanzi}</div>
-                        <div class="info">
-                            <div class="pinyin">${p.pinyin}</div>
-                            <div class="espanol">${p.espanol}</div>
-                            <div class="numero-nivel">
-                                <span class="numero">#${p.numero}</span>
-                                <span class="nivel">HSK ${p.nivel}</span>
-                                <span class="tarjetas-count">6 tarjetas</span>
-                            </div>
-                        </div>
-                        <button class="btn-remove" onclick="eliminar(${p.hsk_id})" title="Eliminar del diccionario">−</button>
+                        <button class="btn-audio" onclick="reproducirAudio('${p.hanzi}')" title="Reproducir audio">🔊</button>
                     </div>
-                `).join('');
-            } catch (error) {
-                console.error('Error al cargar diccionario:', error);
-                document.getElementById('lista-diccionario').innerHTML = 
-                    '<p class="error-message">Error al cargar el diccionario.</p>';
+                    <div class="info">
+                        <div class="pinyin">${p.pinyin}</div>
+                        <div class="espanol">${p.espanol}</div>
+                        <div class="numero-nivel">
+                            <span class="numero">#${p.numero}</span>
+                            <span class="nivel">HSK ${p.nivel}</span>
+                            <span class="tarjetas-count">6 tarjetas</span>
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="eliminar(${p.hsk_id})" title="Eliminar del diccionario">−</button>
+                </div>
+            `).join('');
+        }
+
+        function reproducirAudio(texto) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.8;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                mostrarNotificacion('Tu navegador no soporta síntesis de voz', 'error');
             }
         }
 
@@ -123,6 +172,22 @@
                 setTimeout(() => notif.remove(), 300);
             }, 3000);
         }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('search-input');
+            const searchBtn = document.getElementById('search-btn');
+            
+            searchBtn.addEventListener('click', () => {
+                buscarEnDiccionario(searchInput.value.trim());
+            });
+            
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    buscarEnDiccionario(searchInput.value.trim());
+                }
+            });
+        });
 
         window.onload = cargarDiccionario;
     </script>
