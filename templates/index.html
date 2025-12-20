@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiknow - Aprende Chino</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>🏮 Chiknow</h1>
+    </header>
+
+    <main id="content">
+        <section id="hsk-section">
+            <h2>Lista HSK 1</h2>
+            <div id="lista-hsk">
+                </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item"><span>📚</span>HSK</a>
+        <a href="#" class="nav-item"><span>🔍</span>Diccionario</a>
+        <a href="#" class="nav-item"><span>🗂️</span>Tarjetas</a>
+        <a href="#" class="nav-item"><span>🧠</span>SM2</a>
+    </nav>
+
+    <script>
+        async function cargarHSK() {
+            const res = await fetch('/api/hsk');
+            const palabras = await res.json();
+            const contenedor = document.getElementById('lista-hsk');
+            
+            contenedor.innerHTML = palabras.map(p => `
+                <div class="card">
+                    <div class="hanzi-lg">${p.hanzi}</div>
+                    <div class="info">
+                        <div class="pinyin">${p.pinyin}</div>
+                        <div class="espanol">${p.espanol}</div>
+                    </div>
+                    <button class="btn-add" onclick="agregar(${p.id})">+</button>
+                </div>
+            `).join('');
+        }
+
+        async function agregar(id) {
+            const res = await fetch(`/api/diccionario/add/${id}`, { method: 'POST' });
+            if (res.ok) alert('Añadido al mazo de estudio');
+        }
+
+        window.onload = cargarHSK;
+    </script>
+</body>
+</html>
