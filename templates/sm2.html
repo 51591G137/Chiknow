@@ -10,11 +10,11 @@
 
     <header>
         <h1>🧠 Sistema de Estudio SM2</h1>
-        <p class="subtitle">Repaso espaciado inteligente</p>
+        <p class="subtitle">Repaso espaciado inteligente (0-2)</p>
     </header>
 
     <main id="content">
-        <!-- Vista de estadísticas y inicio -->
+        <!-- Vista de estadísticas -->
         <section id="stats-section">
             <div class="sm2-dashboard">
                 <div class="stat-card">
@@ -41,16 +41,20 @@
             </div>
         </section>
 
-        <!-- Vista de estudio (oculta inicialmente) -->
+        <!-- Vista de estudio -->
         <section id="study-section" style="display: none;">
             <div class="study-header">
-                <div class="study-progress">
-                    <span id="current-card">0</span> / <span id="total-cards">0</span>
+                <div class="study-info">
+                    <span class="study-progress">
+                        <span id="current-card">0</span> / <span id="total-cards">0</span>
+                    </span>
+                    <span class="card-type-badge" id="card-type-badge"></span>
                 </div>
                 <button id="btn-salir-estudio" class="btn-small btn-secondary">Salir</button>
             </div>
 
             <div class="flashcard">
+                <!-- Frente de la tarjeta -->
                 <div class="flashcard-front" id="flashcard-front">
                     <div class="card-content">
                         <div id="mostrado1" class="display-text"></div>
@@ -59,38 +63,41 @@
                     </div>
                 </div>
 
+                <!-- Reverso de la tarjeta -->
                 <div class="flashcard-back" id="flashcard-back" style="display: none;">
                     <div class="card-answer">
                         <h3>Respuesta:</h3>
                         <div id="answer-text" class="answer-display"></div>
                     </div>
                     
+                    <!-- Selector de hanzi fallados (solo para ejemplos) -->
+                    <div id="hanzi-selector" class="hanzi-selector" style="display: none;">
+                        <p class="selector-label">¿Qué hanzi te causó problema? (opcional)</p>
+                        <div id="hanzi-chips" class="hanzi-chips-container"></div>
+                        <label class="frase-fallada-check">
+                            <input type="checkbox" id="check-frase-fallada">
+                            <span>Fallé la estructura de la frase</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Botones de calidad (0-2) -->
                     <div class="quality-buttons">
                         <p class="quality-label">¿Qué tan bien lo recordaste?</p>
-                        <div class="quality-grid">
-                            <button class="quality-btn q0" onclick="responder(0)">
+                        <div class="quality-grid-simple">
+                            <button class="quality-btn-simple q0" onclick="responder(0)">
                                 <span class="q-emoji">😵</span>
-                                <span class="q-text">No recordé</span>
+                                <span class="q-text">Again</span>
+                                <span class="q-subtext">No recordé</span>
                             </button>
-                            <button class="quality-btn q1" onclick="responder(1)">
-                                <span class="q-emoji">😟</span>
-                                <span class="q-text">Muy difícil</span>
-                            </button>
-                            <button class="quality-btn q2" onclick="responder(2)">
+                            <button class="quality-btn-simple q1" onclick="responder(1)">
                                 <span class="q-emoji">😐</span>
-                                <span class="q-text">Difícil</span>
+                                <span class="q-text">Hard</span>
+                                <span class="q-subtext">Con dificultad</span>
                             </button>
-                            <button class="quality-btn q3" onclick="responder(3)">
-                                <span class="q-emoji">🙂</span>
-                                <span class="q-text">Bien</span>
-                            </button>
-                            <button class="quality-btn q4" onclick="responder(4)">
+                            <button class="quality-btn-simple q2" onclick="responder(2)">
                                 <span class="q-emoji">😊</span>
-                                <span class="q-text">Fácil</span>
-                            </button>
-                            <button class="quality-btn q5" onclick="responder(5)">
-                                <span class="q-emoji">😄</span>
-                                <span class="q-text">Muy fácil</span>
+                                <span class="q-text">Easy</span>
+                                <span class="q-subtext">Fácilmente</span>
                             </button>
                         </div>
                     </div>
@@ -102,7 +109,7 @@
             </div>
         </section>
 
-        <!-- Vista de progreso (oculta inicialmente) -->
+        <!-- Vista de progreso -->
         <section id="progress-section" style="display: none;">
             <div class="progress-header">
                 <h2>Progreso Detallado</h2>
@@ -111,7 +118,7 @@
             <div id="progress-list"></div>
         </section>
 
-        <!-- Resultado de sesión (oculto inicialmente) -->
+        <!-- Resultado de sesión -->
         <section id="result-section" style="display: none;">
             <div class="result-card">
                 <h2>🎉 ¡Sesión Completada!</h2>
@@ -121,11 +128,11 @@
                         <span class="result-value" id="result-total">0</span>
                     </div>
                     <div class="result-item success">
-                        <span class="result-label">Correctas (≥3):</span>
+                        <span class="result-label">Correctas (≥1):</span>
                         <span class="result-value" id="result-correctas">0</span>
                     </div>
                     <div class="result-item error">
-                        <span class="result-label">Incorrectas (<3):</span>
+                        <span class="result-label">Incorrectas (0):</span>
                         <span class="result-value" id="result-incorrectas">0</span>
                     </div>
                     <div class="result-item">
@@ -150,6 +157,10 @@
             <span class="nav-icon">📖</span>
             <span class="nav-label">Diccionario</span>
         </a>
+        <a href="/ejemplos" class="nav-item">
+            <span>💬</span>
+            <span class="nav-label">Ejemplos</span>
+        </a>
         <a href="/tarjetas" class="nav-item">
             <span>🗂️</span>
             <span class="nav-label">Tarjetas</span>
@@ -166,6 +177,7 @@
         let indiceActual = 0;
         let tarjetaActual = null;
         let mostrandoRespuesta = false;
+        let hanziSeleccionados = [];
 
         async function cargarEstadisticas() {
             try {
@@ -176,33 +188,30 @@
                 document.getElementById('tarjetas-nuevas').textContent = stats.tarjetas_nuevas;
                 document.getElementById('total-estudiadas').textContent = stats.tarjetas_estudiadas;
             } catch (error) {
-                console.error('Error al cargar estadísticas:', error);
+                console.error('Error:', error);
             }
         }
 
         async function iniciarSesion() {
             try {
-                // Crear sesión
                 const resSession = await fetch('/api/sm2/session/start', { method: 'POST' });
                 const sessionData = await resSession.json();
                 sessionId = sessionData.session_id;
                 
-                // Obtener tarjetas pendientes
                 const resTarjetas = await fetch('/api/sm2/cards/due?limite=20');
                 tarjetasEstudio = await resTarjetas.json();
                 
                 if (tarjetasEstudio.length === 0) {
-                    mostrarNotificacion('¡No hay tarjetas pendientes! Añade más palabras al diccionario.', 'info');
+                    mostrarNotificacion('¡No hay tarjetas pendientes!', 'info');
                     return;
                 }
                 
-                // Cambiar a vista de estudio
                 mostrarSeccion('study');
                 indiceActual = 0;
                 mostrarTarjeta();
             } catch (error) {
-                console.error('Error al iniciar sesión:', error);
-                mostrarNotificacion('Error al iniciar sesión de estudio', 'error');
+                console.error('Error:', error);
+                mostrarNotificacion('Error al iniciar sesión', 'error');
             }
         }
 
@@ -214,12 +223,18 @@
             
             tarjetaActual = tarjetasEstudio[indiceActual];
             mostrandoRespuesta = false;
+            hanziSeleccionados = [];
             
             // Actualizar progreso
             document.getElementById('current-card').textContent = indiceActual + 1;
             document.getElementById('total-cards').textContent = tarjetasEstudio.length;
             
-            // Mostrar contenido de la tarjeta
+            // Badge de tipo
+            const badge = document.getElementById('card-type-badge');
+            badge.textContent = tarjetaActual.tipo === 'ejemplo' ? '💬 Ejemplo' : '📝 Palabra';
+            badge.className = 'card-type-badge ' + (tarjetaActual.tipo === 'ejemplo' ? 'badge-ejemplo' : 'badge-palabra');
+            
+            // Mostrar contenido
             const mostrado1 = document.getElementById('mostrado1');
             const mostrado2 = document.getElementById('mostrado2');
             const btnAudio = document.getElementById('btn-audio');
@@ -232,12 +247,12 @@
             
             btnAudio.style.display = tarjetaActual.audio ? 'block' : 'none';
             
-            // Si solo hay audio, reproducirlo automáticamente
+            // Audio automático si es solo audio
             if (tarjetaActual.audio && !tarjetaActual.mostrado1 && !tarjetaActual.mostrado2) {
                 setTimeout(() => reproducirAudio(tarjetaActual.hanzi), 500);
             }
             
-            // Mostrar frente, ocultar respuesta
+            // Mostrar frente
             document.getElementById('flashcard-front').style.display = 'block';
             document.getElementById('flashcard-back').style.display = 'none';
             document.getElementById('btn-voltear').style.display = 'block';
@@ -248,36 +263,70 @@
             
             mostrandoRespuesta = true;
             document.getElementById('answer-text').textContent = tarjetaActual.requerido;
+            
+            // Mostrar selector de hanzi si es ejemplo
+            const hanziSelector = document.getElementById('hanzi-selector');
+            if (tarjetaActual.tipo === 'ejemplo' && tarjetaActual.hanzi_componentes) {
+                hanziSelector.style.display = 'block';
+                renderizarHanziChips(tarjetaActual.hanzi_componentes);
+            } else {
+                hanziSelector.style.display = 'none';
+            }
+            
             document.getElementById('flashcard-front').style.display = 'none';
             document.getElementById('flashcard-back').style.display = 'block';
             document.getElementById('btn-voltear').style.display = 'none';
         }
 
+        function renderizarHanziChips(hanziList) {
+            const container = document.getElementById('hanzi-chips');
+            container.innerHTML = hanziList.map(h => `
+                <label class="hanzi-chip-selectable">
+                    <input type="checkbox" value="${h}" onchange="toggleHanzi('${h}')">
+                    <span class="hanzi-text">${h}</span>
+                </label>
+            `).join('');
+            document.getElementById('check-frase-fallada').checked = false;
+        }
+
+        function toggleHanzi(hanzi) {
+            const index = hanziSeleccionados.indexOf(hanzi);
+            if (index > -1) {
+                hanziSeleccionados.splice(index, 1);
+            } else {
+                hanziSeleccionados.push(hanzi);
+            }
+        }
+
         async function responder(quality) {
             try {
+                const fraseF allada = document.getElementById('check-frase-fallada')?.checked || false;
+                
+                const payload = {
+                    tarjeta_id: tarjetaActual.tarjeta_id,
+                    session_id: sessionId,
+                    quality: quality,
+                    hanzi_fallados: hanziSeleccionados.length > 0 ? hanziSeleccionados : null,
+                    frase_fallada: fraseFallada
+                };
+                
                 const res = await fetch('/api/sm2/review', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tarjeta_id: tarjetaActual.tarjeta_id,
-                        session_id: sessionId,
-                        quality: quality
-                    })
+                    body: JSON.stringify(payload)
                 });
                 
                 const resultado = await res.json();
                 
-                // Mostrar feedback breve
                 const mensaje = resultado.es_correcta 
-                    ? '✓ ¡Bien! Próxima revisión en ' + resultado.nuevo_intervalo + ' días'
+                    ? `✓ Próximo repaso en ${resultado.nuevo_intervalo} días (${resultado.nuevo_estado})`
                     : '✗ Necesita más práctica';
                 mostrarNotificacion(mensaje, resultado.es_correcta ? 'success' : 'warning');
                 
-                // Siguiente tarjeta
                 indiceActual++;
                 setTimeout(mostrarTarjeta, 300);
             } catch (error) {
-                console.error('Error al procesar respuesta:', error);
+                console.error('Error:', error);
                 mostrarNotificacion('Error al procesar respuesta', 'error');
             }
         }
@@ -287,7 +336,6 @@
                 const res = await fetch(`/api/sm2/session/end/${sessionId}`, { method: 'POST' });
                 const resultado = await res.json();
                 
-                // Mostrar resultados
                 document.getElementById('result-total').textContent = resultado.tarjetas_estudiadas;
                 document.getElementById('result-correctas').textContent = resultado.correctas;
                 document.getElementById('result-incorrectas').textContent = resultado.incorrectas;
@@ -295,7 +343,7 @@
                 
                 mostrarSeccion('result');
             } catch (error) {
-                console.error('Error al finalizar sesión:', error);
+                console.error('Error:', error);
             }
         }
 
@@ -310,12 +358,17 @@
                     contenedor.innerHTML = '<p class="empty-message">No hay progreso aún</p>';
                 } else {
                     contenedor.innerHTML = progreso.map(p => `
-                        <div class="progress-card">
+                        <div class="progress-card ${p.activa ? '' : 'inactiva'}">
                             <div class="progress-header">
-                                <span class="progress-hanzi">${p.hanzi}</span>
-                                <span class="progress-pinyin">${p.pinyin}</span>
+                                <span class="progress-hanzi">${p.hanzi || 'Ejemplo'}</span>
+                                ${p.pinyin ? `<span class="progress-pinyin">${p.pinyin}</span>` : ''}
+                                ${!p.activa ? '<span class="badge-pausada">⏸️ Pausada</span>' : ''}
                             </div>
                             <div class="progress-details">
+                                <div class="progress-stat">
+                                    <span class="label">Estado:</span>
+                                    <span class="value estado-${p.estado}">${p.estado}</span>
+                                </div>
                                 <div class="progress-stat">
                                     <span class="label">Facilidad:</span>
                                     <span class="value">${p.facilidad}</span>
@@ -329,7 +382,7 @@
                                     <span class="value">${p.intervalo_dias} días</span>
                                 </div>
                                 <div class="progress-stat">
-                                    <span class="label">Tasa de acierto:</span>
+                                    <span class="label">Acierto:</span>
                                     <span class="value success">${p.tasa_acierto}%</span>
                                 </div>
                             </div>
@@ -342,7 +395,7 @@
                 
                 mostrarSeccion('progress');
             } catch (error) {
-                console.error('Error al cargar progreso:', error);
+                console.error('Error:', error);
             }
         }
 
@@ -393,7 +446,7 @@
             document.getElementById('btn-voltear').addEventListener('click', voltearTarjeta);
             document.getElementById('btn-audio').addEventListener('click', () => reproducirAudio(tarjetaActual.hanzi));
             document.getElementById('btn-salir-estudio').addEventListener('click', () => {
-                if (confirm('¿Salir de la sesión? El progreso se guardará.')) {
+                if (confirm('¿Salir? El progreso se guardará.')) {
                     if (sessionId) finalizarSesion();
                     else mostrarSeccion('stats');
                 }

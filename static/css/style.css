@@ -1085,3 +1085,517 @@ header h1 {
     padding: 40px;
     display: block;
 }
+
+/* ============================================================================
+   ESTILOS PARA EJEMPLOS
+   ============================================================================ */
+
+/* --- Tabs --- */
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* --- Ejemplo Cards --- */
+.ejemplo-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--border);
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.ejemplo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
+    border-color: var(--primary);
+}
+
+.ejemplo-card.disponible {
+    border-left: 4px solid var(--success);
+}
+
+.ejemplo-card.estudiando {
+    border-left: 4px solid var(--primary);
+}
+
+.ejemplo-card.estado-dominado {
+    background: linear-gradient(to right, #ffffff, #f0fdf4);
+    border-left-color: var(--success);
+}
+
+.ejemplo-card.estado-aprendiendo {
+    border-left-color: var(--warning);
+}
+
+.ejemplo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.hanzi-ejemplo {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
+}
+
+.pinyin-ejemplo {
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.espanol-ejemplo {
+    color: #475569;
+    font-size: 1.05rem;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.hanzi-componentes {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.componentes-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.hanzi-chip {
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
+}
+
+.nivel-badge {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+/* --- Badges de Complejidad y Estado --- */
+.badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.complejidad-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-simple {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-medio {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-complejo {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.estado-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.estado-badge.estado-dominado {
+    background: var(--badge-bg);
+    color: var(--badge-text);
+}
+
+.estado-badge.estado-aprendiendo {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.ejemplo-stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.ejemplo-stats .stat {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* --- Botones de Ejemplo --- */
+.btn-add-ejemplo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 12px;
+}
+
+.btn-add-ejemplo:hover {
+    background: var(--secondary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-remove-ejemplo {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--error);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-ejemplo:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.ya-estudiando {
+    display: inline-block;
+    background: var(--badge-bg);
+    color: var(--badge-text);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 12px;
+}
+
+/* ============================================================================
+   ESTILOS PARA SELECTOR DE HANZI FALLADOS
+   ============================================================================ */
+
+.hanzi-selector {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 2px dashed #cbd5e1;
+}
+
+.selector-label {
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.hanzi-chips-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.hanzi-chip-selectable {
+    position: relative;
+    cursor: pointer;
+}
+
+.hanzi-chip-selectable input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.hanzi-chip-selectable .hanzi-text {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.hanzi-chip-selectable:hover .hanzi-text {
+    background: #c7d2fe;
+    transform: scale(1.05);
+}
+
+.hanzi-chip-selectable input[type="checkbox"]:checked + .hanzi-text {
+    background: var(--error);
+    color: white;
+    border-color: #dc2626;
+    transform: scale(1.1);
+}
+
+.frase-fallada-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.frase-fallada-check input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* ============================================================================
+   ESTILOS PARA SISTEMA SM2 SIMPLIFICADO (0-2)
+   ============================================================================ */
+
+.study-info {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.card-type-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.badge-ejemplo {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-palabra {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Quality Buttons Simple (0-2) */
+.quality-grid-simple {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.quality-btn-simple {
+    padding: 20px;
+    border: 3px solid var(--border);
+    background: white;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.quality-btn-simple:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.quality-btn-simple.q0 {
+    border-color: #e2e8f0;
+}
+
+.quality-btn-simple.q0:hover {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.quality-btn-simple.q1 {
+    border-color: #e2e8f0;
+}
+
+.quality-btn-simple.q1:hover {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.quality-btn-simple.q2 {
+    border-color: #e2e8f0;
+}
+
+.quality-btn-simple.q2:hover {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.quality-btn-simple .q-emoji {
+    font-size: 3rem;
+}
+
+.quality-btn-simple .q-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.quality-btn-simple .q-subtext {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+/* --- Progress Cards Mejoradas --- */
+.progress-card.inactiva {
+    opacity: 0.6;
+    background: linear-gradient(to right, #ffffff, #f8fafc);
+}
+
+.badge-pausada {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.estado-nuevo {
+    color: #64748b;
+}
+
+.estado-aprendiendo {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.estado-dominada {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.estado-matura {
+    color: #10b981;
+    font-weight: 700;
+}
+
+/* ============================================================================
+   RESPONSIVE PARA NUEVOS ELEMENTOS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .ejemplo-card {
+        padding: 16px;
+    }
+    
+    .hanzi-ejemplo {
+        font-size: 2rem;
+    }
+    
+    .ejemplo-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .badges {
+        flex-wrap: wrap;
+    }
+    
+    .quality-grid-simple {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .quality-btn-simple {
+        padding: 16px;
+    }
+    
+    .hanzi-chips-container {
+        justify-content: center;
+    }
+    
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .tab-btn {
+        white-space: nowrap;
+        padding: 10px 16px;
+    }
+}

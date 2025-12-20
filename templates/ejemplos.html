@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiknow - Ejemplos</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>📚 Ejemplos y Frases</h1>
+        <p class="subtitle">Aprende en contexto</p>
+    </header>
+
+    <main id="content">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="disponibles">Disponibles</button>
+            <button class="tab-btn" data-tab="estudiando">En Estudio</button>
+        </div>
+
+        <!-- Tab: Ejemplos Disponibles -->
+        <section id="tab-disponibles" class="tab-content active">
+            <div class="section-header">
+                <h2>Ejemplos Disponibles</h2>
+                <p class="info-text">Estos ejemplos se activaron porque dominas todos sus hanzi</p>
+            </div>
+            <div id="lista-disponibles"></div>
+        </section>
+
+        <!-- Tab: Ejemplos en Estudio -->
+        <section id="tab-estudiando" class="tab-content">
+            <div class="section-header">
+                <h2>Mis Ejemplos</h2>
+                <div class="stats">
+                    <span class="stat-item">Total: <strong id="total-ejemplos">0</strong></span>
+                </div>
+            </div>
+            <div id="lista-estudiando"></div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="/" class="nav-item">
+            <span class="nav-icon">3.0</span>
+            <span class="nav-label">HSK</span>
+        </a>
+        <a href="/diccionario" class="nav-item">
+            <span class="nav-icon">📖</span>
+            <span class="nav-label">Diccionario</span>
+        </a>
+        <a href="/ejemplos" class="nav-item active">
+            <span>💬</span>
+            <span class="nav-label">Ejemplos</span>
+        </a>
+        <a href="/tarjetas" class="nav-item">
+            <span>🗂️</span>
+            <span class="nav-label">Tarjetas</span>
+        </a>
+        <a href="/sm2" class="nav-item">
+            <span>🧠</span>
+            <span class="nav-label">Estudiar</span>
+        </a>
+    </nav>
+
+    <script>
+        let ejemplosDisponibles = [];
+        let ejemplosEstudiando = [];
+
+        async function cargarEjemplosDisponibles() {
+            try {
+                const res = await fetch('/api/ejemplos/disponibles');
+                ejemplosDisponibles = await res.json();
+                renderizarDisponibles();
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('lista-disponibles').innerHTML = 
+                    '<p class="error-message">Error al cargar ejemplos disponibles</p>';
+            }
+        }
+
+        async function cargarEjemplosEstudiando() {
+            try {
+                const res = await fetch('/api/ejemplos/en-estudio');
+                ejemplosEstudiando = await res.json();
+                document.getElementById('total-ejemplos').textContent = ejemplosEstudiando.length;
+                renderizarEstudiando();
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('lista-estudiando').innerHTML = 
+                    '<p class="error-message">Error al cargar ejemplos en estudio</p>';
+            }
+        }
+
+        function renderizarDisponibles() {
+            const contenedor = document.getElementById('lista-disponibles');
+            
+            if (ejemplosDisponibles.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔒</div>
+                        <h3>No hay ejemplos disponibles aún</h3>
+                        <p>Los ejemplos se activan automáticamente cuando dominas todos sus hanzi</p>
+                        <a href="/" class="btn-primary">Ir a estudiar palabras</a>
+                    </div>
+                `;
+                return;
+            }
+
+            contenedor.innerHTML = ejemplosDisponibles.map(ej => {
+                const badgeClass = ej.complejidad === 1 ? 'badge-simple' : 
+                                  ej.complejidad === 2 ? 'badge-medio' : 'badge-complejo';
+                
+                return `
+                    <div class="ejemplo-card disponible">
+                        <div class="ejemplo-header">
+                            <div class="hanzi-ejemplo">${ej.hanzi}</div>
+                            <span class="complejidad-badge ${badgeClass}">
+                                ${ej.complejidad === 1 ? 'Simple' : ej.complejidad === 2 ? 'Medio' : 'Complejo'}
+                            </span>
+                        </div>
+                        <div class="ejemplo-content">
+                            <div class="pinyin-ejemplo">${ej.pinyin}</div>
+                            <div class="espanol-ejemplo">${ej.espanol}</div>
+                            <div class="hanzi-componentes">
+                                <span class="componentes-label">Hanzi:</span>
+                                ${ej.hanzi_componentes.map(h => `<span class="hanzi-chip">${h}</span>`).join('')}
+                            </div>
+                            <div class="nivel-badge">HSK ${ej.nivel}</div>
+                        </div>
+                        ${ej.en_diccionario 
+                            ? '<span class="ya-estudiando">✓ Ya en estudio</span>'
+                            : `<button class="btn-add-ejemplo" onclick="añadirEjemplo(${ej.id})">
+                                  <span>+</span> Añadir al Estudio
+                               </button>`
+                        }
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderizarEstudiando() {
+            const contenedor = document.getElementById('lista-estudiando');
+            
+            if (ejemplosEstudiando.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📚</div>
+                        <h3>No estás estudiando ejemplos aún</h3>
+                        <p>Ve a la pestaña "Disponibles" para añadir ejemplos a tu estudio</p>
+                    </div>
+                `;
+                return;
+            }
+
+            contenedor.innerHTML = ejemplosEstudiando.map(ej => {
+                const badgeClass = ej.complejidad === 1 ? 'badge-simple' : 
+                                  ej.complejidad === 2 ? 'badge-medio' : 'badge-complejo';
+                
+                const estadoClass = ej.dominado ? 'estado-dominado' : 'estado-aprendiendo';
+                const estadoText = ej.dominado ? 'Dominado' : 'Aprendiendo';
+                
+                return `
+                    <div class="ejemplo-card estudiando ${estadoClass}">
+                        <div class="ejemplo-header">
+                            <div class="hanzi-ejemplo">${ej.hanzi}</div>
+                            <div class="badges">
+                                <span class="complejidad-badge ${badgeClass}">
+                                    ${ej.complejidad === 1 ? 'Simple' : ej.complejidad === 2 ? 'Medio' : 'Complejo'}
+                                </span>
+                                <span class="estado-badge ${estadoClass}">${estadoText}</span>
+                            </div>
+                        </div>
+                        <div class="ejemplo-content">
+                            <div class="pinyin-ejemplo">${ej.pinyin}</div>
+                            <div class="espanol-ejemplo">${ej.espanol}</div>
+                            <div class="ejemplo-stats">
+                                <span class="stat">📇 ${ej.num_tarjetas} tarjetas</span>
+                                <span class="stat">🎯 HSK ${ej.nivel}</span>
+                            </div>
+                        </div>
+                        <button class="btn-remove-ejemplo" onclick="quitarEjemplo(${ej.id})" title="Quitar del estudio">
+                            −
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function añadirEjemplo(id) {
+            try {
+                const res = await fetch(`/api/ejemplos/add/${id}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    mostrarNotificacion(data.error, 'error');
+                } else {
+                    mostrarNotificacion('✓ Ejemplo añadido (6 tarjetas creadas)', 'success');
+                    await cargarEjemplosDisponibles();
+                    await cargarEjemplosEstudiando();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarNotificacion('Error al añadir ejemplo', 'error');
+            }
+        }
+
+        async function quitarEjemplo(id) {
+            if (!confirm('¿Quitar este ejemplo del estudio? Se eliminarán sus tarjetas.')) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/ejemplos/remove/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    mostrarNotificacion(data.error, 'error');
+                } else {
+                    mostrarNotificacion('✓ Ejemplo eliminado', 'success');
+                    await cargarEjemplosDisponibles();
+                    await cargarEjemplosEstudiando();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarNotificacion('Error al quitar ejemplo', 'error');
+            }
+        }
+
+        function mostrarNotificacion(mensaje, tipo = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notificacion notificacion-${tipo}`;
+            notif.textContent = mensaje;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => notif.classList.add('show'), 10);
+            setTimeout(() => {
+                notif.classList.remove('show');
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
+        }
+
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = e.target.dataset.tab;
+                
+                // Actualizar botones
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Actualizar contenido
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`tab-${tab}`).classList.add('active');
+            });
+        });
+
+        // Cargar datos iniciales
+        window.onload = async () => {
+            await cargarEjemplosDisponibles();
+            await cargarEjemplosEstudiando();
+        };
+    </script>
+</body>
+</html>

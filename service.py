@@ -1,6 +1,11 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import repository
+import json
+
+# ============================================================================
+# FUNCIONES DICCIONARIO
+# ============================================================================
 
 def agregar_palabra_y_generar_tarjetas(db: Session, hsk_id: int):
     palabra = repository.get_hsk_by_id(db, hsk_id)
@@ -10,43 +15,35 @@ def agregar_palabra_y_generar_tarjetas(db: Session, hsk_id: int):
     # 1. Crear entrada en diccionario
     entrada_dict = repository.create_diccionario_entry(db, hsk_id)
     
-    # 2. Definir las 6 reglas según la especificación
-    # IMPORTANTE: El último parámetro es el valor REAL que debe aparecer como respuesta
+    # 2. Definir las 6 reglas
     reglas = [
-        # 1: Hanzi + Pinyin (audio) -> Español (valor real)
         (palabra.hanzi, palabra.pinyin, True, palabra.espanol),
-        
-        # 2: Hanzi (sin audio) -> Español (valor real)
         (palabra.hanzi, "", False, palabra.espanol),
-        
-        # 3: Audio solo -> Español (valor real)
         ("", "", True, palabra.espanol),
-        
-        # 4: Español + Pinyin (audio) -> Hanzi (valor real)
         (palabra.espanol, palabra.pinyin, True, palabra.hanzi),
-        
-        # 5: Español (audio) -> Hanzi (valor real)
         (palabra.espanol, "", True, palabra.hanzi),
-        
-        # 6: Español (sin audio) -> Hanzi (valor real)
         (palabra.espanol, "", False, palabra.hanzi),
     ]
     
-    # 3. Aplicar reglas y crear progreso inicial para cada tarjeta
+    # 3. Crear tarjetas y progreso inicial
     for m1, m2, aud, req in reglas:
         tarjeta = repository.create_tarjeta(db, {
             "hsk_id": palabra.id,
             "diccionario_id": entrada_dict.id,
+            "ejemplo_id": None,
             "mostrado1": m1 if m1 else None,
             "mostrado2": m2 if m2 else None,
             "audio": aud,
-            "requerido": req
+            "requerido": req,
+            "activa": True
         })
-        
-        # Crear progreso inicial SM2 para esta tarjeta
         repository.get_or_create_progress(db, tarjeta.id)
     
     db.commit()
+    
+    # 4. Verificar si este hanzi activa algún ejemplo
+    verificar_y_activar_ejemplos(db)
+    
     return True
 
 def eliminar_palabra_y_tarjetas(db: Session, hsk_id: int):
@@ -55,17 +52,14 @@ def eliminar_palabra_y_tarjetas(db: Session, hsk_id: int):
     if not entrada:
         return False
     
-    # Primero eliminamos las tarjetas
     repository.delete_tarjetas_by_diccionario_id(db, entrada.id)
-    
-    # Luego eliminamos la entrada del diccionario
     repository.delete_diccionario_entry(db, entrada.id)
     
     db.commit()
     return True
 
 def obtener_diccionario_completo(db: Session):
-    """Obtiene todas las palabras del diccionario con su información completa"""
+    """Obtiene todas las palabras del diccionario"""
     entradas = repository.get_all_diccionario_with_hsk(db)
     
     resultado = []
@@ -77,7 +71,8 @@ def obtener_diccionario_completo(db: Session):
             "nivel": hsk.nivel,
             "hanzi": hsk.hanzi,
             "pinyin": hsk.pinyin,
-            "espanol": hsk.espanol
+            "espanol": hsk.espanol,
+            "activo": diccionario.activo
         })
     
     return resultado
@@ -98,13 +93,255 @@ def buscar_en_diccionario(db: Session, query: str):
             "nivel": hsk.nivel,
             "hanzi": hsk.hanzi,
             "pinyin": hsk.pinyin,
-            "espanol": hsk.espanol
+            "espanol": hsk.espanol,
+            "activo": diccionario.activo
         })
     
     return resultado
 
+# ============================================================================
+# FUNCIONES EJEMPLOS
+# ============================================================================
+
+def crear_ejemplo_completo(db: Session, hanzi: str, pinyin: str, espanol: str, 
+                          hanzi_ids: list, nivel: int = 1, complejidad: int = 1):
+    """
+    Crea un ejemplo completo con sus relaciones a hanzi
+    
+    Args:
+        hanzi_ids: lista de IDs de HSK que componen la frase en orden
+    """
+    # 1. Crear el ejemplo
+    ejemplo = repository.create_ejemplo(db, hanzi, pinyin, espanol, nivel, complejidad)
+    
+    # 2. Crear relaciones con los hanzi
+    for posicion, hsk_id in enumerate(hanzi_ids, start=1):
+        repository.create_hsk_ejemplo_relacion(db, hsk_id, ejemplo.id, posicion)
+    
+    # 3. Verificar si debe activarse automáticamente
+    verificar_y_activar_ejemplo_individual(db, ejemplo.id)
+    
+    db.commit()
+    return ejemplo
+
+def verificar_y_activar_ejemplos(db: Session):
+    """
+    Verifica todos los ejemplos y activa aquellos cuyos hanzi están dominados
+    """
+    ejemplos = db.query(repository.models.Ejemplo).filter(
+        repository.models.Ejemplo.activado == False
+    ).all()
+    
+    for ejemplo in ejemplos:
+        verificar_y_activar_ejemplo_individual(db, ejemplo.id)
+
+def verificar_y_activar_ejemplo_individual(db: Session, ejemplo_id: int):
+    """
+    Verifica si un ejemplo debe activarse (todos sus hanzi están dominados)
+    """
+    # Obtener todos los hanzi del ejemplo
+    hanzi_relaciones = repository.get_hanzi_de_ejemplo(db, ejemplo_id)
+    
+    if not hanzi_relaciones:
+        return False
+    
+    # Verificar si todos los hanzi están dominados
+    hanzi_ids = []
+    todos_dominados = True
+    
+    for relacion, hsk in hanzi_relaciones:
+        hanzi_ids.append(hsk.id)
+        if not repository.esta_hanzi_dominado(db, hsk.id):
+            todos_dominados = False
+            break
+    
+    # Si todos están dominados, activar el ejemplo
+    if todos_dominados:
+        repository.activar_ejemplo(db, ejemplo_id, "hanzi_dominados", hanzi_ids)
+        return True
+    
+    return False
+
+def añadir_ejemplo_a_estudio(db: Session, ejemplo_id: int):
+    """
+    Añade un ejemplo al estudio del usuario (genera tarjetas)
+    """
+    ejemplo = repository.get_ejemplo_by_id(db, ejemplo_id)
+    if not ejemplo or not ejemplo.activado:
+        return {"error": "El ejemplo no está activado o no existe"}
+    
+    # Marcar como en diccionario
+    repository.añadir_ejemplo_a_diccionario(db, ejemplo_id)
+    
+    # Generar las 6 tarjetas para el ejemplo
+    reglas = [
+        (ejemplo.hanzi, ejemplo.pinyin, True, ejemplo.espanol),
+        (ejemplo.hanzi, "", False, ejemplo.espanol),
+        ("", "", True, ejemplo.espanol),
+        (ejemplo.espanol, ejemplo.pinyin, True, ejemplo.hanzi),
+        (ejemplo.espanol, "", True, ejemplo.hanzi),
+        (ejemplo.espanol, "", False, ejemplo.hanzi),
+    ]
+    
+    for m1, m2, aud, req in reglas:
+        tarjeta = repository.create_tarjeta(db, {
+            "hsk_id": None,
+            "diccionario_id": None,
+            "ejemplo_id": ejemplo.id,
+            "mostrado1": m1 if m1 else None,
+            "mostrado2": m2 if m2 else None,
+            "audio": aud,
+            "requerido": req,
+            "activa": True
+        })
+        repository.get_or_create_progress(db, tarjeta.id)
+    
+    db.commit()
+    
+    # Verificar jerarquía y desactivar tarjetas de hanzi si procede
+    gestionar_desactivacion_por_ejemplo(db, ejemplo_id)
+    
+    return {"status": "ok", "message": "Ejemplo añadido al estudio"}
+
+def gestionar_desactivacion_por_ejemplo(db: Session, ejemplo_id: int):
+    """
+    Cuando un ejemplo está dominado, desactiva las tarjetas de sus hanzi componentes
+    """
+    # Obtener hanzi del ejemplo
+    hanzi_relaciones = repository.get_hanzi_de_ejemplo(db, ejemplo_id)
+    
+    # Verificar si el ejemplo está dominado
+    ejemplo = repository.get_ejemplo_by_id(db, ejemplo_id)
+    if not esta_ejemplo_dominado(db, ejemplo_id):
+        return
+    
+    # Desactivar tarjetas de cada hanzi
+    for relacion, hsk in hanzi_relaciones:
+        # Desactivar entrada en diccionario
+        repository.desactivar_diccionario_entry(db, hsk.id)
+        
+        # Desactivar todas las tarjetas del hanzi
+        tarjetas = repository.get_tarjetas_by_hsk_id(db, hsk.id)
+        for tarjeta in tarjetas:
+            repository.desactivar_tarjeta(db, tarjeta.id)
+    
+    # Gestionar jerarquía: desactivar ejemplos simples contenidos
+    ejemplos_simples = repository.get_ejemplos_simples_contenidos(db, ejemplo_id)
+    for jerarquia, ejemplo_simple in ejemplos_simples:
+        # Desactivar tarjetas del ejemplo simple
+        tarjetas_simple = db.query(repository.models.Tarjeta).filter(
+            repository.models.Tarjeta.ejemplo_id == ejemplo_simple.id
+        ).all()
+        for tarjeta in tarjetas_simple:
+            repository.desactivar_tarjeta(db, tarjeta.id)
+
+def esta_ejemplo_dominado(db: Session, ejemplo_id: int):
+    """
+    Verifica si un ejemplo está dominado (todas sus tarjetas en estado dominada/madura)
+    """
+    tarjetas = db.query(repository.models.Tarjeta).filter(
+        repository.models.Tarjeta.ejemplo_id == ejemplo_id
+    ).all()
+    
+    if not tarjetas:
+        return False
+    
+    for tarjeta in tarjetas:
+        progress = repository.get_progress_by_tarjeta(db, tarjeta.id)
+        if not progress or progress.estado not in ['dominada', 'madura']:
+            return False
+    
+    return True
+
+def reactivar_hanzi_desde_ejemplo(db: Session, ejemplo_id: int, hanzi_fallados: list):
+    """
+    Reactiva las tarjetas de hanzi específicos que fallaron en un ejemplo
+    
+    Args:
+        hanzi_fallados: lista de hanzi (caracteres) que fallaron
+    """
+    # Obtener todos los hanzi del ejemplo
+    hanzi_relaciones = repository.get_hanzi_de_ejemplo(db, ejemplo_id)
+    
+    for relacion, hsk in hanzi_relaciones:
+        if hsk.hanzi in hanzi_fallados:
+            # Reactivar entrada en diccionario
+            repository.activar_diccionario_entry(db, hsk.id)
+            
+            # Reactivar todas las tarjetas del hanzi
+            tarjetas = repository.get_tarjetas_by_hsk_id(db, hsk.id)
+            for tarjeta in tarjetas:
+                repository.activar_tarjeta(db, tarjeta.id)
+                
+                # Reiniciar progreso de la tarjeta
+                progress = repository.get_progress_by_tarjeta(db, tarjeta.id)
+                if progress:
+                    repository.update_progress(
+                        db, tarjeta.id, 
+                        easiness=2.5, 
+                        repetitions=0, 
+                        interval=0,
+                        next_review=datetime.utcnow(),
+                        estado="aprendiendo"
+                    )
+    
+    db.commit()
+
+def obtener_ejemplos_disponibles(db: Session):
+    """Obtiene ejemplos activados que el usuario puede añadir"""
+    ejemplos = repository.get_ejemplos_activados(db)
+    
+    resultado = []
+    for ejemplo in ejemplos:
+        # Obtener hanzi componentes
+        hanzi_relaciones = repository.get_hanzi_de_ejemplo(db, ejemplo.id)
+        hanzi_lista = [hsk.hanzi for rel, hsk in hanzi_relaciones]
+        
+        resultado.append({
+            "id": ejemplo.id,
+            "hanzi": ejemplo.hanzi,
+            "pinyin": ejemplo.pinyin,
+            "espanol": ejemplo.espanol,
+            "nivel": ejemplo.nivel,
+            "complejidad": ejemplo.complejidad,
+            "en_diccionario": ejemplo.en_diccionario,
+            "hanzi_componentes": hanzi_lista
+        })
+    
+    return resultado
+
+def obtener_ejemplos_en_estudio(db: Session):
+    """Obtiene ejemplos que el usuario está estudiando"""
+    ejemplos = repository.get_ejemplos_en_diccionario(db)
+    
+    resultado = []
+    for ejemplo in ejemplos:
+        # Obtener progreso
+        tarjetas = db.query(repository.models.Tarjeta).filter(
+            repository.models.Tarjeta.ejemplo_id == ejemplo.id
+        ).all()
+        
+        dominado = esta_ejemplo_dominado(db, ejemplo.id) if tarjetas else False
+        
+        resultado.append({
+            "id": ejemplo.id,
+            "hanzi": ejemplo.hanzi,
+            "pinyin": ejemplo.pinyin,
+            "espanol": ejemplo.espanol,
+            "nivel": ejemplo.nivel,
+            "complejidad": ejemplo.complejidad,
+            "dominado": dominado,
+            "num_tarjetas": len(tarjetas)
+        })
+    
+    return resultado
+
+# ============================================================================
+# FUNCIONES TARJETAS
+# ============================================================================
+
 def obtener_tarjetas_completas(db: Session):
-    """Obtiene todas las tarjetas con información de la palabra"""
+    """Obtiene todas las tarjetas con información"""
     tarjetas = repository.get_all_tarjetas_with_info(db)
     
     resultado = []
@@ -113,13 +350,15 @@ def obtener_tarjetas_completas(db: Session):
             "id": tarjeta.id,
             "hsk_id": tarjeta.hsk_id,
             "diccionario_id": tarjeta.diccionario_id,
-            "hanzi": hsk.hanzi,
-            "pinyin": hsk.pinyin,
-            "espanol": hsk.espanol,
+            "ejemplo_id": tarjeta.ejemplo_id,
+            "hanzi": hsk.hanzi if hsk else None,
+            "pinyin": hsk.pinyin if hsk else None,
+            "espanol": hsk.espanol if hsk else None,
             "mostrado1": tarjeta.mostrado1,
             "mostrado2": tarjeta.mostrado2,
             "audio": tarjeta.audio,
-            "requerido": tarjeta.requerido
+            "requerido": tarjeta.requerido,
+            "activa": tarjeta.activa
         })
     
     return resultado
@@ -128,51 +367,80 @@ def obtener_estadisticas_tarjetas(db: Session):
     """Obtiene estadísticas sobre las tarjetas"""
     total_tarjetas = repository.get_tarjetas_count(db)
     total_palabras = len(repository.get_diccionario_hsk_ids(db))
+    total_ejemplos = len(repository.get_ejemplos_en_diccionario(db))
     
     return {
         "total_tarjetas": total_tarjetas,
         "total_palabras_diccionario": total_palabras,
+        "total_ejemplos_diccionario": total_ejemplos,
         "tarjetas_por_palabra": 6 if total_palabras > 0 else 0
     }
 
-# === SERVICIOS SM2 ===
+# ============================================================================
+# FUNCIONES SM2
+# ============================================================================
 
-def calcular_sm2(quality: int, easiness: float, repetitions: int, interval: int):
+def calcular_sm2_simplificado(quality: int, easiness: float, repetitions: int, interval: int):
     """
-    Implementación del algoritmo SM2
+    Algoritmo SM2 modificado para escala 0-2
     
     Args:
-        quality: Calidad de la respuesta (0-5)
-        easiness: Factor de facilidad actual (EF)
-        repetitions: Número de repeticiones consecutivas correctas
+        quality: 0=Again, 1=Hard, 2=Easy
+        easiness: Factor de facilidad actual
+        repetitions: Repeticiones consecutivas correctas
         interval: Intervalo actual en días
     
     Returns:
-        tuple: (new_easiness, new_repetitions, new_interval)
+        tuple: (new_easiness, new_repetitions, new_interval, new_estado)
     """
-    # Calcular nuevo factor de facilidad (EF)
-    new_easiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+    # Mapeo de quality 0-2 a escala original 0-5 para el cálculo
+    quality_map = {
+        0: 0,  # Again -> 0 (olvidé completamente)
+        1: 3,  # Hard -> 3 (recordé con dificultad)
+        2: 5   # Easy -> 5 (perfecto)
+    }
     
-    # El factor de facilidad no puede ser menor a 1.3
+    q_original = quality_map[quality]
+    
+    # Calcular nuevo factor de facilidad
+    new_easiness = easiness + (0.1 - (5 - q_original) * (0.08 + (5 - q_original) * 0.02))
+    
+    # Límite mínimo de facilidad
     if new_easiness < 1.3:
         new_easiness = 1.3
     
-    # Si la respuesta fue correcta (quality >= 3)
-    if quality >= 3:
+    # Calcular estado y siguiente intervalo
+    if quality >= 1:  # Hard o Easy (recordó)
         if repetitions == 0:
             new_interval = 1
+            new_estado = "aprendiendo"
         elif repetitions == 1:
             new_interval = 6
+            new_estado = "aprendiendo"
+        elif repetitions == 2:
+            new_interval = int(6 * new_easiness)
+            new_estado = "aprendiendo"
         else:
             new_interval = int(interval * new_easiness)
+            # Determinar estado según intervalo
+            if new_interval >= 60:
+                new_estado = "madura"
+            elif new_interval >= 21:
+                new_estado = "dominada"
+            else:
+                new_estado = "aprendiendo"
         
         new_repetitions = repetitions + 1
-    else:
-        # Respuesta incorrecta: reiniciar
+        
+        # Ajuste por dificultad
+        if quality == 1:  # Hard
+            new_interval = max(1, int(new_interval * 0.7))  # Reducir 30%
+    else:  # Again (olvidó)
         new_repetitions = 0
         new_interval = 1
+        new_estado = "aprendiendo"
     
-    return new_easiness, new_repetitions, new_interval
+    return new_easiness, new_repetitions, new_interval, new_estado
 
 def iniciar_sesion_estudio(db: Session):
     """Inicia una nueva sesión de estudio"""
@@ -183,50 +451,88 @@ def iniciar_sesion_estudio(db: Session):
     }
 
 def obtener_tarjetas_para_estudiar(db: Session, limite: int = 20):
-    """
-    Obtiene tarjetas que necesitan revisión
-    Prioriza tarjetas vencidas y nuevas
-    """
+    """Obtiene tarjetas ACTIVAS que necesitan revisión"""
     tarjetas_data = repository.get_cards_due_for_review(db, limite)
     
     resultado = []
-    for tarjeta, hsk, progress in tarjetas_data:
-        resultado.append({
-            "tarjeta_id": tarjeta.id,
-            "hanzi": hsk.hanzi,
-            "pinyin": hsk.pinyin,
-            "espanol": hsk.espanol,
-            "mostrado1": tarjeta.mostrado1,
-            "mostrado2": tarjeta.mostrado2,
-            "audio": tarjeta.audio,
-            "requerido": tarjeta.requerido,
-            "es_nueva": progress is None or progress.total_reviews == 0,
-            "repeticiones": progress.repetitions if progress else 0,
-            "facilidad": progress.easiness_factor if progress else 2.5,
-            "proxima_revision": progress.next_review.isoformat() if progress else None
-        })
+    for tarjeta, hsk, progress, ejemplo in tarjetas_data:
+        # Determinar si es palabra o ejemplo
+        if tarjeta.hsk_id:
+            # Es una palabra
+            resultado.append({
+                "tarjeta_id": tarjeta.id,
+                "tipo": "palabra",
+                "hanzi": hsk.hanzi,
+                "pinyin": hsk.pinyin,
+                "espanol": hsk.espanol,
+                "mostrado1": tarjeta.mostrado1,
+                "mostrado2": tarjeta.mostrado2,
+                "audio": tarjeta.audio,
+                "requerido": tarjeta.requerido,
+                "es_nueva": progress is None or progress.total_reviews == 0,
+                "repeticiones": progress.repetitions if progress else 0,
+                "facilidad": progress.easiness_factor if progress else 2.5,
+                "estado": progress.estado if progress else "nuevo",
+                "proxima_revision": progress.next_review.isoformat() if progress else None
+            })
+        elif tarjeta.ejemplo_id:
+            # Es un ejemplo
+            # Obtener hanzi componentes
+            hanzi_relaciones = repository.get_hanzi_de_ejemplo(db, ejemplo.id)
+            hanzi_componentes = [hsk_rel.hanzi for rel, hsk_rel in hanzi_relaciones]
+            
+            resultado.append({
+                "tarjeta_id": tarjeta.id,
+                "tipo": "ejemplo",
+                "ejemplo_id": ejemplo.id,
+                "hanzi": ejemplo.hanzi,
+                "pinyin": ejemplo.pinyin,
+                "espanol": ejemplo.espanol,
+                "hanzi_componentes": hanzi_componentes,
+                "mostrado1": tarjeta.mostrado1,
+                "mostrado2": tarjeta.mostrado2,
+                "audio": tarjeta.audio,
+                "requerido": tarjeta.requerido,
+                "es_nueva": progress is None or progress.total_reviews == 0,
+                "repeticiones": progress.repetitions if progress else 0,
+                "facilidad": progress.easiness_factor if progress else 2.5,
+                "estado": progress.estado if progress else "nuevo",
+                "proxima_revision": progress.next_review.isoformat() if progress else None
+            })
     
     return resultado
 
-def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: int):
+def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: int,
+                      hanzi_fallados: list = None, frase_fallada: bool = False):
     """
-    Procesa la respuesta del usuario y actualiza el progreso según SM2
+    Procesa la respuesta del usuario (escala 0-2)
     
     Args:
-        tarjeta_id: ID de la tarjeta
-        session_id: ID de la sesión actual
-        quality: Calidad de la respuesta (0-5)
+        quality: 0=Again, 1=Hard, 2=Easy
+        hanzi_fallados: Lista de hanzi que fallaron (solo para ejemplos)
+        frase_fallada: Si falló la estructura de la frase (solo para ejemplos)
     """
-    # Obtener progreso actual
+    if quality < 0 or quality > 2:
+        return {"error": "Quality debe estar entre 0 y 2"}
+    
+    # Obtener tarjeta y progreso
+    tarjeta = db.query(repository.models.Tarjeta).filter(
+        repository.models.Tarjeta.id == tarjeta_id
+    ).first()
+    
+    if not tarjeta:
+        return {"error": "Tarjeta no encontrada"}
+    
     progress = repository.get_or_create_progress(db, tarjeta_id)
     
     # Guardar valores anteriores
     prev_easiness = progress.easiness_factor
     prev_interval = progress.interval
     prev_repetitions = progress.repetitions
+    prev_estado = progress.estado
     
     # Calcular nuevos valores con SM2
-    new_easiness, new_repetitions, new_interval = calcular_sm2(
+    new_easiness, new_repetitions, new_interval, new_estado = calcular_sm2_simplificado(
         quality, prev_easiness, prev_repetitions, prev_interval
     )
     
@@ -234,23 +540,39 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
     next_review = datetime.utcnow() + timedelta(days=new_interval)
     
     # Actualizar progreso
-    repository.update_progress(db, tarjeta_id, new_easiness, new_repetitions, new_interval, next_review)
+    repository.update_progress(db, tarjeta_id, new_easiness, new_repetitions, 
+                              new_interval, next_review, new_estado)
     
     # Actualizar estadísticas
-    is_correct = quality >= 3
+    is_correct = quality >= 1
     repository.increment_progress_stats(db, tarjeta_id, is_correct)
     
     # Registrar revisión
     repository.create_review(
         db, tarjeta_id, session_id, quality,
         prev_easiness, new_easiness,
-        prev_interval, new_interval
+        prev_interval, new_interval,
+        prev_estado, new_estado,
+        hanzi_fallados, frase_fallada
     )
+    
+    # Si es un ejemplo y fallaron hanzi específicos, reactivarlos
+    if tarjeta.ejemplo_id and hanzi_fallados and len(hanzi_fallados) > 0:
+        reactivar_hanzi_desde_ejemplo(db, tarjeta.ejemplo_id, hanzi_fallados)
+    
+    # Si es un ejemplo y ahora está dominado, gestionar desactivaciones
+    if tarjeta.ejemplo_id and new_estado in ['dominada', 'madura']:
+        gestionar_desactivacion_por_ejemplo(db, tarjeta.ejemplo_id)
+    
+    # Si es un hanzi y ahora está dominado, verificar ejemplos
+    if tarjeta.hsk_id and new_estado in ['dominada', 'madura']:
+        verificar_y_activar_ejemplos(db)
     
     return {
         "success": True,
         "nueva_facilidad": round(new_easiness, 2),
         "nuevo_intervalo": new_interval,
+        "nuevo_estado": new_estado,
         "proxima_revision": next_review.isoformat(),
         "es_correcta": is_correct
     }
@@ -260,7 +582,7 @@ def finalizar_sesion_estudio(db: Session, session_id: int):
     reviews = repository.get_reviews_by_session(db, session_id)
     
     estudiadas = len(reviews)
-    correctas = sum(1 for r in reviews if r.quality >= 3)
+    correctas = sum(1 for r in reviews if r.quality >= 1)
     incorrectas = estudiadas - correctas
     
     session = repository.update_sm2_session(db, session_id, estudiadas, correctas, incorrectas)
@@ -296,18 +618,21 @@ def obtener_progreso_detallado(db: Session):
     for progress, tarjeta, hsk in progreso_data:
         resultado.append({
             "tarjeta_id": tarjeta.id,
-            "hanzi": hsk.hanzi,
-            "pinyin": hsk.pinyin,
-            "espanol": hsk.espanol,
+            "tipo": "palabra" if tarjeta.hsk_id else "ejemplo",
+            "hanzi": hsk.hanzi if hsk else None,
+            "pinyin": hsk.pinyin if hsk else None,
+            "espanol": hsk.espanol if hsk else None,
             "facilidad": round(progress.easiness_factor, 2),
             "repeticiones": progress.repetitions,
             "intervalo_dias": progress.interval,
+            "estado": progress.estado,
             "proxima_revision": progress.next_review.isoformat(),
             "total_revisiones": progress.total_reviews,
             "revisiones_correctas": progress.correct_reviews,
             "tasa_acierto": round((progress.correct_reviews / progress.total_reviews * 100) 
                                   if progress.total_reviews > 0 else 0, 1),
-            "ultima_revision": progress.last_review.isoformat() if progress.last_review else None
+            "ultima_revision": progress.last_review.isoformat() if progress.last_review else None,
+            "activa": tarjeta.activa
         })
     
     return resultado
