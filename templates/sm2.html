@@ -6,7 +6,89 @@
     <title>Estudio SM2 - Chiknow</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        /* Estilos temporales para el modal de estadísticas */
+        /* Estilos adicionales para respuesta usuario */
+        .respuesta-usuario-container {
+            margin: 1.5rem 0;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .respuesta-usuario-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .respuesta-usuario-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .respuesta-usuario-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .comparacion-respuestas {
+            display: grid;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            max-width: 500px;
+        }
+        
+        .respuesta-box {
+            padding: 1rem;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+        
+        .respuesta-usuario-box {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        
+        .respuesta-usuario-box .label {
+            color: #92400e;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        .respuesta-usuario-box .texto {
+            color: #78350f;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .respuesta-correcta-box {
+            background: #dcfce7;
+            border-color: #10b981;
+        }
+        
+        .respuesta-correcta-box .label {
+            color: #166534;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        .respuesta-correcta-box .texto {
+            color: #166534;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        /* Modal estadísticas */
         .modal {
             display: none;
             position: fixed;
@@ -25,11 +107,12 @@
         .modal-content {
             background: white;
             padding: 2rem;
-            border-radius: 8px;
+            border-radius: 12px;
             max-width: 600px;
             max-height: 80vh;
             overflow-y: auto;
             position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
         .modal-close {
             position: absolute;
@@ -37,6 +120,11 @@
             right: 1rem;
             cursor: pointer;
             font-size: 1.5rem;
+            color: #64748b;
+            transition: color 0.2s;
+        }
+        .modal-close:hover {
+            color: #ef4444;
         }
         .stats-grid {
             display: grid;
@@ -46,28 +134,38 @@
         }
         .stat-item-detail {
             padding: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-item-detail div {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
         }
         .stat-item-detail strong {
             display: block;
-            font-size: 1.5rem;
-            color: #2196F3;
+            font-size: 1.8rem;
+            color: #6366f1;
         }
         .btn-stats {
             position: fixed;
             top: 80px;
             right: 20px;
-            padding: 0.5rem 1rem;
-            background: #2196F3;
+            padding: 0.75rem 1.25rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             z-index: 100;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s;
         }
         .btn-stats:hover {
-            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
         }
     </style>
 </head>
@@ -113,14 +211,40 @@
         <div id="area-estudio" class="study-area" style="display: none;">
             <!-- Tarjeta -->
             <div class="flashcard" id="flashcard">
+                <!-- PARTE FRONTAL -->
                 <div class="flashcard-front" id="card-front">
                     <div class="card-content" id="card-mostrado"></div>
+                    
+                    <!-- Input para respuesta del usuario -->
+                    <div class="respuesta-usuario-container">
+                        <label for="respuesta-usuario">Tu respuesta:</label>
+                        <input 
+                            type="text" 
+                            id="respuesta-usuario" 
+                            class="respuesta-usuario-input"
+                            placeholder="Escribe tu respuesta aquí..."
+                            autocomplete="off"
+                        />
+                    </div>
+                    
                     <button onclick="voltearTarjeta()" class="btn btn-secondary">
                         🔄 Mostrar respuesta
                     </button>
                 </div>
+                
+                <!-- PARTE TRASERA -->
                 <div class="flashcard-back" id="card-back" style="display: none;">
-                    <div class="card-content" id="card-requerido"></div>
+                    <!-- Comparación de respuestas -->
+                    <div class="comparacion-respuestas">
+                        <div class="respuesta-usuario-box">
+                            <div class="label">📝 Tu respuesta</div>
+                            <div class="texto" id="tu-respuesta-texto">-</div>
+                        </div>
+                        <div class="respuesta-correcta-box">
+                            <div class="label">✅ Respuesta correcta</div>
+                            <div class="texto" id="respuesta-correcta-texto">-</div>
+                        </div>
+                    </div>
                     
                     <!-- Botones SM2 -->
                     <div class="sm2-buttons">
@@ -235,6 +359,7 @@
         let tarjetaActual = null;
         let indiceActual = 0;
         let tarjetasCompletadas = 0;
+        let respuestaUsuario = '';
 
         // Cargar estadísticas al inicio
         window.addEventListener('DOMContentLoaded', cargarEstadisticas);
@@ -317,19 +442,31 @@
             if (tarjetaActual.mostrado1) mostradoHTML += `<div class="hanzi-large">${tarjetaActual.mostrado1}</div>`;
             if (tarjetaActual.mostrado2) mostradoHTML += `<div class="pinyin-text">${tarjetaActual.mostrado2}</div>`;
             
-            const requeridoHTML = `<div class="answer-text">${tarjetaActual.requerido}</div>`;
-            
             document.getElementById('card-mostrado').innerHTML = mostradoHTML;
-            document.getElementById('card-requerido').innerHTML = requeridoHTML;
             document.getElementById('card-front').style.display = 'block';
             document.getElementById('card-back').style.display = 'none';
             
+            // Limpiar y enfocar input de respuesta
+            const inputRespuesta = document.getElementById('respuesta-usuario');
+            inputRespuesta.value = '';
+            inputRespuesta.focus();
+            
             actualizarProgreso();
             
-            if (tarjetaActual.audio) reproducirAudio(tarjetaActual.hanzi);
+            if (tarjetaActual.audio && tarjetaActual.hanzi) {
+                reproducirAudio(tarjetaActual.hanzi);
+            }
         }
 
         function voltearTarjeta() {
+            // Guardar respuesta del usuario
+            respuestaUsuario = document.getElementById('respuesta-usuario').value.trim();
+            
+            // Mostrar comparación de respuestas
+            document.getElementById('tu-respuesta-texto').textContent = respuestaUsuario || '(sin respuesta)';
+            document.getElementById('respuesta-correcta-texto').textContent = tarjetaActual.requerido;
+            
+            // Voltear
             document.getElementById('card-front').style.display = 'none';
             document.getElementById('card-back').style.display = 'block';
             
@@ -355,7 +492,7 @@
         }
 
         async function responder(calidad) {
-            console.log(`📝 Calidad: ${calidad}`);
+            console.log(`📝 Calidad: ${calidad}, Respuesta: "${respuestaUsuario}"`);
             
             if (!sessionId) {
                 mostrarNotificacion('Error: No hay sesión activa', 'error');
@@ -363,20 +500,19 @@
             }
             
             try {
-                console.log('Enviando:', {
+                const payload = {
                     tarjeta_id: tarjetaActual.tarjeta_id,
                     session_id: sessionId,
-                    quality: calidad
-                });
+                    quality: calidad,
+                    respuesta_usuario: respuestaUsuario || null
+                };
+                
+                console.log('Enviando:', payload);
                 
                 const response = await fetch('/api/sm2/review', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tarjeta_id: tarjetaActual.tarjeta_id,
-                        session_id: sessionId,
-                        quality: calidad
-                    })
+                    body: JSON.stringify(payload)
                 });
                 
                 console.log('📊 Response status:', response.status);
@@ -396,6 +532,7 @@
                 
                 tarjetasCompletadas++;
                 indiceActual++;
+                respuestaUsuario = ''; // Limpiar para siguiente tarjeta
                 mostrarTarjeta();
                 
             } catch (error) {
@@ -530,10 +667,20 @@
             }
         });
 
+        // Atajos de teclado
         document.addEventListener('keydown', (e) => {
             const cardBack = document.getElementById('card-back');
+            const inputRespuesta = document.getElementById('respuesta-usuario');
+            
+            // Si el input está enfocado, no interceptar Enter (para poder escribir)
+            if (document.activeElement === inputRespuesta && e.key === 'Enter') {
+                e.preventDefault();
+                voltearTarjeta();
+                return;
+            }
+            
             if (cardBack.style.display === 'none') {
-                if (e.key === ' ' || e.key === 'Enter') {
+                if (e.key === ' ') {
                     e.preventDefault();
                     voltearTarjeta();
                 }

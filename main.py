@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pydantic import BaseModel # Añadido
+from pydantic import BaseModel
 from typing import List, Optional
 import os
 
@@ -12,18 +12,10 @@ import service
 import repository
 import database
 
-# --- MODELOS DE DATOS (Pydantic) ---
-
-class ReviewRequest(BaseModel):
-    tarjeta_id: int
-    session_id: int
-    quality: int
-    hanzi_fallados: Optional[List[str]] = None
-    frase_fallada: bool = False
-
 # --- CAPA DE ARRANQUE ---
 database.Base.metadata.create_all(bind=database.engine)
 
+# CREAR APP PRIMERO
 app = FastAPI()
 
 base_path = os.path.dirname(os.path.realpath(__file__))
@@ -32,6 +24,16 @@ templates_path = os.path.join(base_path, "templates")
 
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 templates = Jinja2Templates(directory=templates_path)
+
+# --- MODELOS DE DATOS (Pydantic) ---
+
+class ReviewRequest(BaseModel):
+    tarjeta_id: int
+    session_id: int
+    quality: int
+    hanzi_fallados: Optional[List[str]] = None
+    frase_fallada: bool = False
+    respuesta_usuario: Optional[str] = None
 
 # --- RUTAS DE NAVEGACIÓN (FRONTEND) ---
 
@@ -203,6 +205,7 @@ def api_procesar_respuesta(
     quality: 0-2 (0=Again, 1=Hard, 2=Easy)
     hanzi_fallados: Lista de hanzi que fallaron (solo para ejemplos)
     frase_fallada: Si falló la estructura (solo para ejemplos)
+    respuesta_usuario: Lo que el usuario escribió/pensó (opcional)
     """
     if review.quality < 0 or review.quality > 2:
         return {"error": "Quality debe estar entre 0 y 2"}
@@ -213,7 +216,8 @@ def api_procesar_respuesta(
         review.session_id, 
         review.quality, 
         review.hanzi_fallados, 
-        review.frase_fallada
+        review.frase_fallada,
+        review.respuesta_usuario
     )
 
 @app.post("/api/sm2/session/end/{session_id}")

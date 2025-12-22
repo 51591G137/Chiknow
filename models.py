@@ -11,6 +11,9 @@ class HSK(Base):
     hanzi = Column(String)
     pinyin = Column(String)
     espanol = Column(String)
+    hanzi_alt = Column(String, nullable=True)
+    pinyin_alt = Column(String, nullable=True)
+    espanol_alt = Column(String, nullable=True)
 
 class Diccionario(Base):
     __tablename__ = "diccionario"
@@ -120,6 +123,7 @@ class SM2Review(Base):
     # Datos de la revisión
     quality = Column(Integer)  # 0-2: 0=Again, 1=Hard, 2=Easy
     
+    respuesta_usuario = Column(Text, nullable=True)
     previous_easiness = Column(Float)
     new_easiness = Column(Float)
     previous_interval = Column(Integer)

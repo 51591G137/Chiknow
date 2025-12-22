@@ -505,7 +505,8 @@ def obtener_tarjetas_para_estudiar(db: Session, limite: int = 20):
     return resultado
 
 def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: int,
-                      hanzi_fallados: list = None, frase_fallada: bool = False):
+                      hanzi_fallados: list = None, frase_fallada: bool = False,
+                      respuesta_usuario: str = None):
     """
     Procesa la respuesta del usuario (escala 0-2)
     
@@ -555,7 +556,8 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
         prev_easiness, new_easiness,
         prev_interval, new_interval,
         prev_estado, new_estado,
-        hanzi_fallados, frase_fallada
+        hanzi_fallados, frase_fallada,
+        respuesta_usuario  # NUEVO
     )
     
     # Si es un ejemplo y fallaron hanzi específicos, reactivarlos

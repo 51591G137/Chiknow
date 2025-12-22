@@ -3,6 +3,7 @@ from sqlalchemy import or_, and_, func
 from datetime import datetime, timedelta
 import models
 import json
+import random
 
 # ============================================================================
 # FUNCIONES HSK
@@ -332,7 +333,7 @@ def increment_progress_stats(db: Session, tarjeta_id: int, is_correct: bool):
     return progress
 
 def get_cards_due_for_review(db: Session, limite: int = None):
-    """Obtiene tarjetas ACTIVAS que necesitan revisión (fecha <= ahora)"""
+    """Obtiene tarjetas ACTIVAS que necesitan revisión (ORDEN ALEATORIO)"""
     query = db.query(models.Tarjeta, models.HSK, models.SM2Progress, models.Ejemplo).outerjoin(
         models.HSK, models.Tarjeta.hsk_id == models.HSK.id
     ).outerjoin(
@@ -340,18 +341,23 @@ def get_cards_due_for_review(db: Session, limite: int = None):
     ).outerjoin(
         models.SM2Progress, models.Tarjeta.id == models.SM2Progress.tarjeta_id
     ).filter(
-        models.Tarjeta.activa == True  # Solo tarjetas activas
+        models.Tarjeta.activa == True
     ).filter(
         or_(
             models.SM2Progress.next_review <= datetime.utcnow(),
             models.SM2Progress.next_review == None
         )
-    ).order_by(models.SM2Progress.next_review.asc())
+    ).all()
     
+    # NUEVO: Mezclar aleatoriamente
+    tarjetas_list = list(query)
+    random.shuffle(tarjetas_list)
+    
+    # Aplicar límite después de mezclar
     if limite:
-        query = query.limit(limite)
+        tarjetas_list = tarjetas_list[:limite]
     
-    return query.all()
+    return tarjetas_list
 
 def get_all_progress_with_cards(db: Session):
     """Obtiene todo el progreso con información de tarjetas"""
@@ -389,12 +395,13 @@ def create_review(db: Session, tarjeta_id: int, session_id: int, quality: int,
                   prev_easiness: float, new_easiness: float, 
                   prev_interval: int, new_interval: int,
                   prev_estado: str, new_estado: str,
-                  hanzi_fallados: list = None, frase_fallada: bool = False):
-    """Registra una revisión"""
+                  hanzi_fallados: list = None, frase_fallada: bool = False,
+                  respuesta_usuario: str = None):  # NUEVO PARÁMETRO
     review = models.SM2Review(
         tarjeta_id=tarjeta_id,
         session_id=session_id,
         quality=quality,
+        respuesta_usuario=respuesta_usuario,  # NUEVO
         previous_easiness=prev_easiness,
         new_easiness=new_easiness,
         previous_interval=prev_interval,
