@@ -5,6 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudio SM2 - Chiknow</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Estilos temporales para el modal de estadísticas */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .stat-item-detail {
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .stat-item-detail strong {
+            display: block;
+            font-size: 1.5rem;
+            color: #2196F3;
+        }
+        .btn-stats {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        .btn-stats:hover {
+            background: #1976D2;
+        }
+    </style>
 </head>
 <body>
 
@@ -13,13 +78,18 @@
         <p class="subtitle">Repaso espaciado inteligente (0-2)</p>
     </header>
 
+    <!-- Botón flotante de estadísticas -->
+    <button class="btn-stats" onclick="mostrarEstadisticasDetalladas()">
+        📊 Ver Estadísticas
+    </button>
+
     <main id="content">
         <!-- Estadísticas -->
         <div class="stats-container">
             <div class="stat-card">
                 <div class="stat-value" id="stat-pendientes">-</div>
                 <div class="stat-label">Pendientes Hoy</div>
-            </div> 
+            </div>
             <div class="stat-card">
                 <div class="stat-value" id="stat-nuevas">-</div>
                 <div class="stat-label">Tarjetas Nuevas</div>
@@ -92,6 +162,47 @@
             </div>
         </div>
     </main>
+
+    <!-- Modal de estadísticas detalladas -->
+    <div id="modal-stats" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="cerrarEstadisticas()">✕</span>
+            <h2>📊 Estadísticas Detalladas</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-item-detail">
+                    <div>Total Tarjetas</div>
+                    <strong id="detail-total">0</strong>
+                </div>
+                <div class="stat-item-detail">
+                    <div>Tarjetas Estudiadas</div>
+                    <strong id="detail-estudiadas">0</strong>
+                </div>
+                <div class="stat-item-detail">
+                    <div>Tarjetas Nuevas</div>
+                    <strong id="detail-nuevas">0</strong>
+                </div>
+                <div class="stat-item-detail">
+                    <div>Pendientes Hoy</div>
+                    <strong id="detail-pendientes">0</strong>
+                </div>
+                <div class="stat-item-detail">
+                    <div>Total Revisiones</div>
+                    <strong id="detail-revisiones">0</strong>
+                </div>
+                <div class="stat-item-detail">
+                    <div>Tasa de Éxito</div>
+                    <strong id="detail-tasa">0%</strong>
+                </div>
+            </div>
+
+            <h3>📈 Progreso por Estado</h3>
+            <div id="progreso-estados"></div>
+
+            <h3>🎯 Tarjetas por Nivel de Dominio</h3>
+            <div id="progreso-niveles"></div>
+        </div>
+    </div>
 
     <nav class="bottom-nav">
     <a href="/" class="nav-item">
@@ -222,13 +333,25 @@
             document.getElementById('card-front').style.display = 'none';
             document.getElementById('card-back').style.display = 'block';
             
-            const progress = tarjetaActual.sm2_progress;
-            if (progress) {
-                const hardDays = Math.round(progress.interval * 1.2);
-                const easyDays = Math.round(progress.interval * 2.5);
-                document.getElementById('hard-interval').textContent = `${hardDays}d`;
-                document.getElementById('easy-interval').textContent = `${easyDays}d`;
+            // Mostrar intervalos estimados
+            const rep = tarjetaActual.repeticiones || 0;
+            const fac = tarjetaActual.facilidad || 2.5;
+            
+            let hardDays, easyDays;
+            if (rep === 0) {
+                hardDays = 1;
+                easyDays = 1;
+            } else if (rep === 1) {
+                hardDays = 4; // 6 * 0.7
+                easyDays = 6;
+            } else {
+                const currentInterval = tarjetaActual.intervalo || 6;
+                hardDays = Math.round(currentInterval * fac * 0.7);
+                easyDays = Math.round(currentInterval * fac);
             }
+            
+            document.getElementById('hard-interval').textContent = `${hardDays}d`;
+            document.getElementById('easy-interval').textContent = `${easyDays}d`;
         }
 
         async function responder(calidad) {
@@ -240,28 +363,44 @@
             }
             
             try {
+                console.log('Enviando:', {
+                    tarjeta_id: tarjetaActual.tarjeta_id,
+                    session_id: sessionId,
+                    quality: calidad
+                });
+                
                 const response = await fetch('/api/sm2/review', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        tarjeta_id: tarjetaActual.id,
+                        tarjeta_id: tarjetaActual.tarjeta_id,
                         session_id: sessionId,
                         quality: calidad
                     })
                 });
                 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                console.log('📊 Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
                 
                 const result = await response.json();
                 console.log('✅ Registrado:', result);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
                 
                 tarjetasCompletadas++;
                 indiceActual++;
                 mostrarTarjeta();
                 
             } catch (error) {
-                console.error('❌ Error:', error);
-                mostrarNotificacion('Error al registrar', 'error');
+                console.error('❌ Error completo:', error);
+                mostrarNotificacion('Error al registrar: ' + error.message, 'error');
             }
         }
 
@@ -309,6 +448,88 @@
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
+        async function mostrarEstadisticasDetalladas() {
+            try {
+                // Cargar estadísticas generales
+                const statsRes = await fetch('/api/sm2/statistics');
+                const stats = await statsRes.json();
+                
+                // Cargar progreso detallado
+                const progressRes = await fetch('/api/sm2/progress');
+                const progress = await progressRes.json();
+                
+                // Actualizar modal
+                document.getElementById('detail-total').textContent = stats.total_tarjetas;
+                document.getElementById('detail-estudiadas').textContent = stats.tarjetas_estudiadas;
+                document.getElementById('detail-nuevas').textContent = stats.tarjetas_nuevas;
+                document.getElementById('detail-pendientes').textContent = stats.tarjetas_pendientes_hoy;
+                document.getElementById('detail-revisiones').textContent = stats.total_revisiones;
+                
+                // Calcular tasa de éxito promedio
+                const totalReviews = progress.reduce((sum, p) => sum + p.total_revisiones, 0);
+                const correctReviews = progress.reduce((sum, p) => sum + p.revisiones_correctas, 0);
+                const tasaExito = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0;
+                document.getElementById('detail-tasa').textContent = `${tasaExito}%`;
+                
+                // Agrupar por estado
+                const porEstado = {};
+                progress.forEach(p => {
+                    if (!porEstado[p.estado]) porEstado[p.estado] = 0;
+                    porEstado[p.estado]++;
+                });
+                
+                let estadosHTML = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 1rem 0;">';
+                for (const [estado, count] of Object.entries(porEstado)) {
+                    estadosHTML += `
+                        <div style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <div style="font-size: 0.9rem; color: #666;">${estado}</div>
+                            <strong style="font-size: 1.2rem;">${count}</strong>
+                        </div>
+                    `;
+                }
+                estadosHTML += '</div>';
+                document.getElementById('progreso-estados').innerHTML = estadosHTML;
+                
+                // Mostrar top 10 tarjetas por progreso
+                const top10 = progress
+                    .filter(p => p.activa)
+                    .sort((a, b) => b.repeticiones - a.repeticiones)
+                    .slice(0, 10);
+                
+                let nivelesHTML = '<div style="margin: 1rem 0;">';
+                top10.forEach((p, i) => {
+                    nivelesHTML += `
+                        <div style="padding: 0.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                            <span>${i+1}. ${p.hanzi || '(ejemplo)'} - ${p.espanol}</span>
+                            <span style="color: #2196F3; font-weight: bold;">
+                                ${p.repeticiones} rep | ${p.intervalo_dias}d | ${p.estado}
+                            </span>
+                        </div>
+                    `;
+                });
+                nivelesHTML += '</div>';
+                document.getElementById('progreso-niveles').innerHTML = nivelesHTML;
+                
+                // Mostrar modal
+                document.getElementById('modal-stats').classList.add('show');
+                
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+                mostrarNotificacion('Error al cargar estadísticas', 'error');
+            }
+        }
+
+        function cerrarEstadisticas() {
+            document.getElementById('modal-stats').classList.remove('show');
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('modal-stats').addEventListener('click', (e) => {
+            if (e.target.id === 'modal-stats') {
+                cerrarEstadisticas();
+            }
+        });
+
         document.addEventListener('keydown', (e) => {
             const cardBack = document.getElementById('card-back');
             if (cardBack.style.display === 'none') {
@@ -320,6 +541,11 @@
                 if (e.key === '0') responder(0);
                 if (e.key === '1') responder(1);
                 if (e.key === '2') responder(2);
+            }
+            
+            // ESC para cerrar modal
+            if (e.key === 'Escape') {
+                cerrarEstadisticas();
             }
         });
     </script>

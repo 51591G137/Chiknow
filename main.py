@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from pydantic import BaseModel # Añadido
 from typing import List, Optional
 import os
 
@@ -10,6 +11,15 @@ import models
 import service
 import repository
 import database
+
+# --- MODELOS DE DATOS (Pydantic) ---
+
+class ReviewRequest(BaseModel):
+    tarjeta_id: int
+    session_id: int
+    quality: int
+    hanzi_fallados: Optional[List[str]] = None
+    frase_fallada: bool = False
 
 # --- CAPA DE ARRANQUE ---
 database.Base.metadata.create_all(bind=database.engine)
@@ -185,11 +195,7 @@ def api_tarjetas_pendientes(limite: int = Query(20), db: Session = Depends(datab
 
 @app.post("/api/sm2/review")
 def api_procesar_respuesta(
-    tarjeta_id: int,
-    session_id: int,
-    quality: int,
-    hanzi_fallados: Optional[List[str]] = None,
-    frase_fallada: bool = False,
+    review: ReviewRequest,
     db: Session = Depends(database.get_db)
 ):
     """
@@ -198,10 +204,17 @@ def api_procesar_respuesta(
     hanzi_fallados: Lista de hanzi que fallaron (solo para ejemplos)
     frase_fallada: Si falló la estructura (solo para ejemplos)
     """
-    if quality < 0 or quality > 2:
+    if review.quality < 0 or review.quality > 2:
         return {"error": "Quality debe estar entre 0 y 2"}
     
-    return service.procesar_respuesta(db, tarjeta_id, session_id, quality, hanzi_fallados, frase_fallada)
+    return service.procesar_respuesta(
+        db, 
+        review.tarjeta_id, 
+        review.session_id, 
+        review.quality, 
+        review.hanzi_fallados, 
+        review.frase_fallada
+    )
 
 @app.post("/api/sm2/session/end/{session_id}")
 def api_finalizar_sesion(session_id: int, db: Session = Depends(database.get_db)):
