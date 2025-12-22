@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chiknow - Estudiar SM2</title>
+    <title>Estudio SM2 - Chiknow</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -14,396 +14,283 @@
     </header>
 
     <main id="content">
-        <!-- Vista de estadísticas -->
-        <section id="stats-section">
-            <div class="sm2-dashboard">
-                <div class="stat-card">
-                    <div class="stat-number" id="pendientes-hoy">0</div>
-                    <div class="stat-label">Pendientes Hoy</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="tarjetas-nuevas">0</div>
-                    <div class="stat-label">Tarjetas Nuevas</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="total-estudiadas">0</div>
-                    <div class="stat-label">Total Estudiadas</div>
-                </div>
+        <!-- Estadísticas -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-pendientes">-</div>
+                <div class="stat-label">Pendientes Hoy</div>
+            </div> 
+            <div class="stat-card">
+                <div class="stat-value" id="stat-nuevas">-</div>
+                <div class="stat-label">Tarjetas Nuevas</div>
             </div>
-            
-            <div class="action-center">
-                <button id="btn-iniciar-estudio" class="btn-large btn-primary">
-                    🚀 Iniciar Sesión de Estudio
-                </button>
-                <button id="btn-ver-progreso" class="btn-large btn-secondary">
-                    📊 Ver Progreso Detallado
-                </button>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-estudiadas">-</div>
+                <div class="stat-label">Total Estudiadas</div>
             </div>
-        </section>
+        </div>
 
-        <!-- Vista de estudio -->
-        <section id="study-section" style="display: none;">
-            <div class="study-header">
-                <div class="study-info">
-                    <span class="study-progress">
-                        <span id="current-card">0</span> / <span id="total-cards">0</span>
-                    </span>
-                    <span class="card-type-badge" id="card-type-badge"></span>
+        <!-- Área de estudio -->
+        <div id="area-inicial" class="study-area">
+            <button onclick="iniciarEstudio()" class="btn btn-primary btn-large">
+                📚 Iniciar sesión de estudio
+            </button>
+            <p class="help-text">
+                Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
+            </p>
+        </div>
+
+        <div id="area-estudio" class="study-area" style="display: none;">
+            <!-- Tarjeta -->
+            <div class="flashcard" id="flashcard">
+                <div class="flashcard-front" id="card-front">
+                    <div class="card-content" id="card-mostrado"></div>
+                    <button onclick="voltearTarjeta()" class="btn btn-secondary">
+                        🔄 Mostrar respuesta
+                    </button>
                 </div>
-                <button id="btn-salir-estudio" class="btn-small btn-secondary">Salir</button>
-            </div>
-
-            <div class="flashcard">
-                <!-- Frente de la tarjeta -->
-                <div class="flashcard-front" id="flashcard-front">
-                    <div class="card-content">
-                        <div id="mostrado1" class="display-text"></div>
-                        <div id="mostrado2" class="display-text secondary"></div>
-                        <button id="btn-audio" class="btn-audio-large" style="display: none;">🔊 Reproducir</button>
-                    </div>
-                </div>
-
-                <!-- Reverso de la tarjeta -->
-                <div class="flashcard-back" id="flashcard-back" style="display: none;">
-                    <div class="card-answer">
-                        <h3>Respuesta:</h3>
-                        <div id="answer-text" class="answer-display"></div>
-                    </div>
+                <div class="flashcard-back" id="card-back" style="display: none;">
+                    <div class="card-content" id="card-requerido"></div>
                     
-                    <!-- Selector de hanzi fallados (solo para ejemplos) -->
-                    <div id="hanzi-selector" class="hanzi-selector" style="display: none;">
-                        <p class="selector-label">¿Qué hanzi te causó problema? (opcional)</p>
-                        <div id="hanzi-chips" class="hanzi-chips-container"></div>
-                        <label class="frase-fallada-check">
-                            <input type="checkbox" id="check-frase-fallada">
-                            <span>Fallé la estructura de la frase</span>
-                        </label>
-                    </div>
-                    
-                    <!-- Botones de calidad (0-2) -->
-                    <div class="quality-buttons">
-                        <p class="quality-label">¿Qué tan bien lo recordaste?</p>
-                        <div class="quality-grid-simple">
-                            <button class="quality-btn-simple q0" onclick="responder(0)">
-                                <span class="q-emoji">😵</span>
-                                <span class="q-text">Again</span>
-                                <span class="q-subtext">No recordé</span>
-                            </button>
-                            <button class="quality-btn-simple q1" onclick="responder(1)">
-                                <span class="q-emoji">😐</span>
-                                <span class="q-text">Hard</span>
-                                <span class="q-subtext">Con dificultad</span>
-                            </button>
-                            <button class="quality-btn-simple q2" onclick="responder(2)">
-                                <span class="q-emoji">😊</span>
-                                <span class="q-text">Easy</span>
-                                <span class="q-subtext">Fácilmente</span>
-                            </button>
-                        </div>
+                    <!-- Botones SM2 -->
+                    <div class="sm2-buttons">
+                        <button onclick="responder(0)" class="sm2-btn sm2-again">
+                            <span class="sm2-number">0</span>
+                            <span class="sm2-label">Again</span>
+                            <span class="sm2-sublabel">&lt;10min</span>
+                        </button>
+                        <button onclick="responder(1)" class="sm2-btn sm2-hard">
+                            <span class="sm2-number">1</span>
+                            <span class="sm2-label">Hard</span>
+                            <span class="sm2-sublabel" id="hard-interval">-</span>
+                        </button>
+                        <button onclick="responder(2)" class="sm2-btn sm2-easy">
+                            <span class="sm2-number">2</span>
+                            <span class="sm2-label">Easy</span>
+                            <span class="sm2-sublabel" id="easy-interval">-</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="flip-button-container">
-                <button id="btn-voltear" class="btn-flip">Mostrar Respuesta</button>
+            <!-- Progreso -->
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+                <div class="progress-text" id="progress-text">0 / 0</div>
             </div>
-        </section>
+        </div>
 
-        <!-- Vista de progreso -->
-        <section id="progress-section" style="display: none;">
-            <div class="progress-header">
-                <h2>Progreso Detallado</h2>
-                <button id="btn-volver-stats" class="btn-secondary">← Volver</button>
+        <!-- Mensaje de fin -->
+        <div id="area-fin" class="study-area" style="display: none;">
+            <div class="completion-message">
+                <h2>🎉 ¡Sesión completada!</h2>
+                <p id="mensaje-fin"></p>
+                <button onclick="location.reload()" class="btn btn-primary">
+                    🔄 Nueva sesión
+                </button>
+                <a href="/" class="btn btn-secondary">🏠 Volver a inicio</a>
             </div>
-            <div id="progress-list"></div>
-        </section>
-
-        <!-- Resultado de sesión -->
-        <section id="result-section" style="display: none;">
-            <div class="result-card">
-                <h2>🎉 ¡Sesión Completada!</h2>
-                <div class="result-stats">
-                    <div class="result-item">
-                        <span class="result-label">Tarjetas estudiadas:</span>
-                        <span class="result-value" id="result-total">0</span>
-                    </div>
-                    <div class="result-item success">
-                        <span class="result-label">Correctas (≥1):</span>
-                        <span class="result-value" id="result-correctas">0</span>
-                    </div>
-                    <div class="result-item error">
-                        <span class="result-label">Incorrectas (0):</span>
-                        <span class="result-value" id="result-incorrectas">0</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Porcentaje de acierto:</span>
-                        <span class="result-value" id="result-porcentaje">0%</span>
-                    </div>
-                </div>
-                <div class="result-actions">
-                    <button id="btn-nueva-sesion" class="btn-primary">Nueva Sesión</button>
-                    <button id="btn-volver-inicio" class="btn-secondary">Volver al Inicio</button>
-                </div>
-            </div>
-        </section>
+        </div>
     </main>
 
     <nav class="bottom-nav">
-        <a href="/" class="nav-item">
-            <span class="nav-icon">3.0</span>
-            <span class="nav-label">HSK</span>
-        </a>
-        <a href="/diccionario" class="nav-item">
-            <span class="nav-icon">📖</span>
-            <span class="nav-label">Diccionario</span>
-        </a>
-        <a href="/ejemplos" class="nav-item">
-            <span>💬</span>
-            <span class="nav-label">Ejemplos</span>
-        </a>
-        <a href="/tarjetas" class="nav-item">
-            <span>🗂️</span>
-            <span class="nav-label">Tarjetas</span>
-        </a>
-        <a href="/sm2" class="nav-item active">
-            <span>🧠</span>
-            <span class="nav-label">Estudiar</span>
-        </a>
+    <a href="/" class="nav-item">
+        <span class="nav-icon">3.0</span>
+        <span class="nav-label">HSK</span>
+    </a>
+    <a href="/diccionario" class="nav-item">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">Diccionario</span>
+    </a>
+    <a href="/ejemplos" class="nav-item">
+        <span>💬</span>
+        <span class="nav-label">Ejemplos</span>
+    </a>
+    <a href="/tarjetas" class="nav-item">
+        <span>🗂️</span>
+        <span class="nav-label">Tarjetas</span>
+    </a>
+    <a href="/sm2" class="nav-item active">
+        <span>🧠</span>
+        <span class="nav-label">Estudiar</span>
+    </a>
     </nav>
+
+    <div id="notification" class="notification"></div>
 
     <script>
         let sessionId = null;
         let tarjetasEstudio = [];
-        let indiceActual = 0;
         let tarjetaActual = null;
-        let mostrandoRespuesta = false;
-        let hanziSeleccionados = [];
+        let indiceActual = 0;
+        let tarjetasCompletadas = 0;
+
+        // Cargar estadísticas al inicio
+        window.addEventListener('DOMContentLoaded', cargarEstadisticas);
 
         async function cargarEstadisticas() {
+            console.log('🔄 Cargando estadísticas...');
             try {
-                const res = await fetch('/api/sm2/statistics');
-                const stats = await res.json();
+                const response = await fetch('/api/sm2/statistics');
+                console.log('📊 Respuesta:', response.status);
                 
-                document.getElementById('pendientes-hoy').textContent = stats.tarjetas_pendientes_hoy;
-                document.getElementById('tarjetas-nuevas').textContent = stats.tarjetas_nuevas;
-                document.getElementById('total-estudiadas').textContent = stats.tarjetas_estudiadas;
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const stats = await response.json();
+                console.log('📊 Stats:', stats);
+                
+                document.getElementById('stat-pendientes').textContent = stats.tarjetas_pendientes_hoy || 0;
+                document.getElementById('stat-nuevas').textContent = stats.tarjetas_nuevas || 0;
+                document.getElementById('stat-estudiadas').textContent = stats.tarjetas_estudiadas || 0;
+                
+                console.log('✅ Stats actualizadas');
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ Error stats:', error);
+                document.getElementById('stat-pendientes').textContent = '0';
+                document.getElementById('stat-nuevas').textContent = '0';
+                document.getElementById('stat-estudiadas').textContent = '0';
             }
         }
 
-        async function iniciarSesion() {
+        async function iniciarEstudio() {
+            console.log('📚 Iniciando estudio...');
             try {
-                const resSession = await fetch('/api/sm2/session/start', { method: 'POST' });
-                const sessionData = await resSession.json();
-                sessionId = sessionData.session_id;
+                const response = await fetch('/api/sm2/session/start', { method: 'POST' });
+                console.log('🎯 Respuesta sesión:', response.status);
                 
-                const resTarjetas = await fetch('/api/sm2/cards/due?limite=20');
-                tarjetasEstudio = await resTarjetas.json();
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('🎯 Session data:', data);
+                sessionId = data.session_id;
+                
+                const cardsResponse = await fetch('/api/sm2/cards/due?limite=20');
+                if (!cardsResponse.ok) throw new Error(`HTTP ${cardsResponse.status}`);
+                
+                tarjetasEstudio = await cardsResponse.json();
+                console.log(`📝 ${tarjetasEstudio.length} tarjetas`);
                 
                 if (tarjetasEstudio.length === 0) {
-                    mostrarNotificacion('¡No hay tarjetas pendientes!', 'info');
+                    mostrarNotificacion('No hay tarjetas pendientes', 'info');
                     return;
                 }
                 
-                mostrarSeccion('study');
                 indiceActual = 0;
+                tarjetasCompletadas = 0;
+                
+                document.getElementById('area-inicial').style.display = 'none';
+                document.getElementById('area-estudio').style.display = 'block';
+                
                 mostrarTarjeta();
+                console.log('✅ Sesión iniciada');
             } catch (error) {
-                console.error('Error:', error);
-                mostrarNotificacion('Error al iniciar sesión', 'error');
+                console.error('❌ Error:', error);
+                mostrarNotificacion('Error: ' + error.message, 'error');
             }
         }
 
         function mostrarTarjeta() {
             if (indiceActual >= tarjetasEstudio.length) {
-                finalizarSesion();
+                finalizarEstudio();
                 return;
             }
             
             tarjetaActual = tarjetasEstudio[indiceActual];
-            mostrandoRespuesta = false;
-            hanziSeleccionados = [];
+            console.log('🃏 Tarjeta:', tarjetaActual);
             
-            // Actualizar progreso
-            document.getElementById('current-card').textContent = indiceActual + 1;
-            document.getElementById('total-cards').textContent = tarjetasEstudio.length;
+            let mostradoHTML = '';
+            if (tarjetaActual.audio) mostradoHTML += `<div class="audio-indicator">🔊 Audio</div>`;
+            if (tarjetaActual.mostrado1) mostradoHTML += `<div class="hanzi-large">${tarjetaActual.mostrado1}</div>`;
+            if (tarjetaActual.mostrado2) mostradoHTML += `<div class="pinyin-text">${tarjetaActual.mostrado2}</div>`;
             
-            // Badge de tipo
-            const badge = document.getElementById('card-type-badge');
-            badge.textContent = tarjetaActual.tipo === 'ejemplo' ? '💬 Ejemplo' : '📝 Palabra';
-            badge.className = 'card-type-badge ' + (tarjetaActual.tipo === 'ejemplo' ? 'badge-ejemplo' : 'badge-palabra');
+            const requeridoHTML = `<div class="answer-text">${tarjetaActual.requerido}</div>`;
             
-            // Mostrar contenido
-            const mostrado1 = document.getElementById('mostrado1');
-            const mostrado2 = document.getElementById('mostrado2');
-            const btnAudio = document.getElementById('btn-audio');
+            document.getElementById('card-mostrado').innerHTML = mostradoHTML;
+            document.getElementById('card-requerido').innerHTML = requeridoHTML;
+            document.getElementById('card-front').style.display = 'block';
+            document.getElementById('card-back').style.display = 'none';
             
-            mostrado1.textContent = tarjetaActual.mostrado1 || '';
-            mostrado1.style.display = tarjetaActual.mostrado1 ? 'block' : 'none';
+            actualizarProgreso();
             
-            mostrado2.textContent = tarjetaActual.mostrado2 || '';
-            mostrado2.style.display = tarjetaActual.mostrado2 ? 'block' : 'none';
-            
-            btnAudio.style.display = tarjetaActual.audio ? 'block' : 'none';
-            
-            // Audio automático si es solo audio
-            if (tarjetaActual.audio && !tarjetaActual.mostrado1 && !tarjetaActual.mostrado2) {
-                setTimeout(() => reproducirAudio(tarjetaActual.hanzi), 500);
-            }
-            
-            // Mostrar frente
-            document.getElementById('flashcard-front').style.display = 'block';
-            document.getElementById('flashcard-back').style.display = 'none';
-            document.getElementById('btn-voltear').style.display = 'block';
+            if (tarjetaActual.audio) reproducirAudio(tarjetaActual.hanzi);
         }
 
         function voltearTarjeta() {
-            if (mostrandoRespuesta) return;
+            document.getElementById('card-front').style.display = 'none';
+            document.getElementById('card-back').style.display = 'block';
             
-            mostrandoRespuesta = true;
-            document.getElementById('answer-text').textContent = tarjetaActual.requerido;
-            
-            // Mostrar selector de hanzi si es ejemplo
-            const hanziSelector = document.getElementById('hanzi-selector');
-            if (tarjetaActual.tipo === 'ejemplo' && tarjetaActual.hanzi_componentes) {
-                hanziSelector.style.display = 'block';
-                renderizarHanziChips(tarjetaActual.hanzi_componentes);
-            } else {
-                hanziSelector.style.display = 'none';
-            }
-            
-            document.getElementById('flashcard-front').style.display = 'none';
-            document.getElementById('flashcard-back').style.display = 'block';
-            document.getElementById('btn-voltear').style.display = 'none';
-        }
-
-        function renderizarHanziChips(hanziList) {
-            const container = document.getElementById('hanzi-chips');
-            container.innerHTML = hanziList.map(h => `
-                <label class="hanzi-chip-selectable">
-                    <input type="checkbox" value="${h}" onchange="toggleHanzi('${h}')">
-                    <span class="hanzi-text">${h}</span>
-                </label>
-            `).join('');
-            document.getElementById('check-frase-fallada').checked = false;
-        }
-
-        function toggleHanzi(hanzi) {
-            const index = hanziSeleccionados.indexOf(hanzi);
-            if (index > -1) {
-                hanziSeleccionados.splice(index, 1);
-            } else {
-                hanziSeleccionados.push(hanzi);
+            const progress = tarjetaActual.sm2_progress;
+            if (progress) {
+                const hardDays = Math.round(progress.interval * 1.2);
+                const easyDays = Math.round(progress.interval * 2.5);
+                document.getElementById('hard-interval').textContent = `${hardDays}d`;
+                document.getElementById('easy-interval').textContent = `${easyDays}d`;
             }
         }
 
-        async function responder(quality) {
+        async function responder(calidad) {
+            console.log(`📝 Calidad: ${calidad}`);
+            
+            if (!sessionId) {
+                mostrarNotificacion('Error: No hay sesión activa', 'error');
+                return;
+            }
+            
             try {
-                const fraseF allada = document.getElementById('check-frase-fallada')?.checked || false;
-                
-                const payload = {
-                    tarjeta_id: tarjetaActual.tarjeta_id,
-                    session_id: sessionId,
-                    quality: quality,
-                    hanzi_fallados: hanziSeleccionados.length > 0 ? hanziSeleccionados : null,
-                    frase_fallada: fraseFallada
-                };
-                
-                const res = await fetch('/api/sm2/review', {
+                const response = await fetch('/api/sm2/review', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        tarjeta_id: tarjetaActual.id,
+                        session_id: sessionId,
+                        quality: calidad
+                    })
                 });
                 
-                const resultado = await res.json();
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
-                const mensaje = resultado.es_correcta 
-                    ? `✓ Próximo repaso en ${resultado.nuevo_intervalo} días (${resultado.nuevo_estado})`
-                    : '✗ Necesita más práctica';
-                mostrarNotificacion(mensaje, resultado.es_correcta ? 'success' : 'warning');
+                const result = await response.json();
+                console.log('✅ Registrado:', result);
                 
+                tarjetasCompletadas++;
                 indiceActual++;
-                setTimeout(mostrarTarjeta, 300);
+                mostrarTarjeta();
+                
             } catch (error) {
-                console.error('Error:', error);
-                mostrarNotificacion('Error al procesar respuesta', 'error');
+                console.error('❌ Error:', error);
+                mostrarNotificacion('Error al registrar', 'error');
             }
         }
 
-        async function finalizarSesion() {
-            try {
-                const res = await fetch(`/api/sm2/session/end/${sessionId}`, { method: 'POST' });
-                const resultado = await res.json();
-                
-                document.getElementById('result-total').textContent = resultado.tarjetas_estudiadas;
-                document.getElementById('result-correctas').textContent = resultado.correctas;
-                document.getElementById('result-incorrectas').textContent = resultado.incorrectas;
-                document.getElementById('result-porcentaje').textContent = resultado.porcentaje_acierto + '%';
-                
-                mostrarSeccion('result');
-            } catch (error) {
-                console.error('Error:', error);
-            }
+        function actualizarProgreso() {
+            const total = tarjetasEstudio.length;
+            const completadas = tarjetasCompletadas;
+            const porcentaje = (completadas / total) * 100;
+            
+            document.getElementById('progress-fill').style.width = porcentaje + '%';
+            document.getElementById('progress-text').textContent = `${completadas} / ${total}`;
         }
 
-        async function verProgreso() {
-            try {
-                const res = await fetch('/api/sm2/progress');
-                const progreso = await res.json();
-                
-                const contenedor = document.getElementById('progress-list');
-                
-                if (progreso.length === 0) {
-                    contenedor.innerHTML = '<p class="empty-message">No hay progreso aún</p>';
-                } else {
-                    contenedor.innerHTML = progreso.map(p => `
-                        <div class="progress-card ${p.activa ? '' : 'inactiva'}">
-                            <div class="progress-header">
-                                <span class="progress-hanzi">${p.hanzi || 'Ejemplo'}</span>
-                                ${p.pinyin ? `<span class="progress-pinyin">${p.pinyin}</span>` : ''}
-                                ${!p.activa ? '<span class="badge-pausada">⏸️ Pausada</span>' : ''}
-                            </div>
-                            <div class="progress-details">
-                                <div class="progress-stat">
-                                    <span class="label">Estado:</span>
-                                    <span class="value estado-${p.estado}">${p.estado}</span>
-                                </div>
-                                <div class="progress-stat">
-                                    <span class="label">Facilidad:</span>
-                                    <span class="value">${p.facilidad}</span>
-                                </div>
-                                <div class="progress-stat">
-                                    <span class="label">Repeticiones:</span>
-                                    <span class="value">${p.repeticiones}</span>
-                                </div>
-                                <div class="progress-stat">
-                                    <span class="label">Intervalo:</span>
-                                    <span class="value">${p.intervalo_dias} días</span>
-                                </div>
-                                <div class="progress-stat">
-                                    <span class="label">Acierto:</span>
-                                    <span class="value success">${p.tasa_acierto}%</span>
-                                </div>
-                            </div>
-                            <div class="progress-footer">
-                                <span class="next-review">Próxima: ${formatearFecha(p.proxima_revision)}</span>
-                            </div>
-                        </div>
-                    `).join('');
+        async function finalizarEstudio() {
+            console.log('🎉 Completado');
+            
+            if (sessionId) {
+                try {
+                    await fetch(`/api/sm2/session/end/${sessionId}`, { method: 'POST' });
+                } catch (error) {
+                    console.error('Error:', error);
                 }
-                
-                mostrarSeccion('progress');
-            } catch (error) {
-                console.error('Error:', error);
             }
-        }
-
-        function mostrarSeccion(seccion) {
-            document.getElementById('stats-section').style.display = seccion === 'stats' ? 'block' : 'none';
-            document.getElementById('study-section').style.display = seccion === 'study' ? 'block' : 'none';
-            document.getElementById('progress-section').style.display = seccion === 'progress' ? 'block' : 'none';
-            document.getElementById('result-section').style.display = seccion === 'result' ? 'block' : 'none';
+            
+            document.getElementById('area-estudio').style.display = 'none';
+            document.getElementById('area-fin').style.display = 'block';
+            document.getElementById('mensaje-fin').textContent = 
+                `Has completado ${tarjetasCompletadas} tarjetas.`;
+            
+            cargarEstadisticas();
         }
 
         function reproducirAudio(texto) {
@@ -415,54 +302,26 @@
             }
         }
 
-        function formatearFecha(isoString) {
-            const fecha = new Date(isoString);
-            const ahora = new Date();
-            const diff = Math.ceil((fecha - ahora) / (1000 * 60 * 60 * 24));
-            
-            if (diff < 0) return 'Vencida';
-            if (diff === 0) return 'Hoy';
-            if (diff === 1) return 'Mañana';
-            return `En ${diff} días`;
-        }
-
         function mostrarNotificacion(mensaje, tipo = 'info') {
-            const notif = document.createElement('div');
-            notif.className = `notificacion notificacion-${tipo}`;
-            notif.textContent = mensaje;
-            document.body.appendChild(notif);
-            
-            setTimeout(() => notif.classList.add('show'), 10);
-            setTimeout(() => {
-                notif.classList.remove('show');
-                setTimeout(() => notif.remove(), 300);
-            }, 3000);
+            const notification = document.getElementById('notification');
+            notification.textContent = mensaje;
+            notification.className = 'notification show ' + tipo;
+            setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btn-iniciar-estudio').addEventListener('click', iniciarSesion);
-            document.getElementById('btn-ver-progreso').addEventListener('click', verProgreso);
-            document.getElementById('btn-voltear').addEventListener('click', voltearTarjeta);
-            document.getElementById('btn-audio').addEventListener('click', () => reproducirAudio(tarjetaActual.hanzi));
-            document.getElementById('btn-salir-estudio').addEventListener('click', () => {
-                if (confirm('¿Salir? El progreso se guardará.')) {
-                    if (sessionId) finalizarSesion();
-                    else mostrarSeccion('stats');
+        document.addEventListener('keydown', (e) => {
+            const cardBack = document.getElementById('card-back');
+            if (cardBack.style.display === 'none') {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    voltearTarjeta();
                 }
-            });
-            document.getElementById('btn-volver-stats').addEventListener('click', () => mostrarSeccion('stats'));
-            document.getElementById('btn-nueva-sesion').addEventListener('click', () => {
-                mostrarSeccion('stats');
-                cargarEstadisticas();
-            });
-            document.getElementById('btn-volver-inicio').addEventListener('click', () => {
-                mostrarSeccion('stats');
-                cargarEstadisticas();
-            });
+            } else {
+                if (e.key === '0') responder(0);
+                if (e.key === '1') responder(1);
+                if (e.key === '2') responder(2);
+            }
         });
-
-        window.onload = cargarEstadisticas;
     </script>
 </body>
 </html>

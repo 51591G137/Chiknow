@@ -24,17 +24,71 @@ body {
     background-color: var(--bg);
     color: var(--text);
     line-height: 1.6;
-    padding: 20px 20px 80px 20px;
-    max-width: 900px;
-    margin: 0 auto;
 }
 
-/* --- Header --- */
+/* ============================================================================
+   NAVEGACIÓN SUPERIOR (para SM2)
+   ============================================================================ */
+.nav-bar {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    padding: 1rem 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    font-family: 'Noto Sans SC', sans-serif;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.nav-links a {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.nav-links a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.nav-links a.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-weight: 600;
+}
+
+/* ============================================================================
+   HEADERS Y CONTENEDORES GENERALES
+   ============================================================================ */
 header {
     text-align: center;
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 2px solid var(--border);
+    padding-top: 20px;
 }
 
 header h1 {
@@ -48,6 +102,24 @@ header h1 {
     color: #64748b;
     font-size: 0.95rem;
 }
+
+/* Contenedor para páginas con navegación inferior (HSK, Diccionario, etc) */
+body:not(.sm2-page) {
+    padding: 20px 20px 80px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Contenedor específico para SM2 */
+.sm2-page .container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 20px;
+}
+
+/* ============================================================================
+   CONTENIDO PÁGINAS REGULARES (HSK, Diccionario, Tarjetas, Ejemplos)
+   ============================================================================ */
 
 /* --- Section Header --- */
 .section-header {
@@ -154,7 +226,7 @@ header h1 {
 }
 
 /* --- Cards --- */
-#lista-hsk, #lista-diccionario, #lista-tarjetas {
+#lista-hsk, #lista-diccionario, #lista-tarjetas, #lista-disponibles, #lista-estudiando {
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -167,9 +239,6 @@ header h1 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 2px solid var(--border);
     transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     position: relative;
     animation: fadeIn 0.4s ease-out;
 }
@@ -336,6 +405,7 @@ header h1 {
     transform: scale(0.95);
 }
 
+/* --- Botones Generales --- */
 .btn-primary, .btn-secondary {
     display: inline-block;
     padding: 12px 24px;
@@ -346,6 +416,7 @@ header h1 {
     cursor: pointer;
     border: none;
     font-size: 1rem;
+    text-align: center;
 }
 
 .btn-primary {
@@ -381,713 +452,247 @@ header h1 {
     font-size: 0.9rem;
 }
 
-/* --- SM2 Dashboard --- */
-.sm2-dashboard {
+/* ============================================================================
+   PÁGINA SM2 (Estudio)
+   ============================================================================ */
+
+/* Page Header específico para SM2 */
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-top: 1rem;
+}
+
+.page-header h1 {
+    color: #1e293b;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.page-header .subtitle {
+    color: #64748b;
+    font-size: 1.1rem;
+}
+
+/* Estadísticas SM2 */
+.stats-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    gap: 1rem;
+    margin: 2rem 0;
 }
 
 .stat-card {
     background: white;
     border-radius: 12px;
-    padding: 24px;
+    padding: 1.5rem;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 2px solid var(--border);
+    border: 2px solid #e2e8f0;
     transition: all 0.3s;
 }
 
 .stat-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+    border-color: #6366f1;
 }
 
-.stat-number {
-    font-size: 3rem;
+.stat-value {
+    font-size: 2.5rem;
     font-weight: 700;
-    color: var(--primary);
-    margin-bottom: 8px;
+    color: #6366f1;
+    margin-bottom: 0.5rem;
 }
 
 .stat-label {
     color: #64748b;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
-.action-center {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    flex-wrap: wrap;
+/* Área de estudio SM2 */
+.study-area {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin: 2rem 0;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 2px solid #e2e8f0;
 }
 
-/* --- Flashcard --- */
-.study-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+.help-text {
+    color: #64748b;
+    margin-top: 1rem;
+    font-style: italic;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.study-progress {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--primary);
-}
-
+/* Tarjeta flash SM2 */
 .flashcard {
     background: white;
     border-radius: 16px;
-    padding: 40px;
+    padding: 3rem;
     min-height: 300px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    border: 2px solid var(--border);
-    margin-bottom: 20px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: 3px solid #e2e8f0;
+    margin: 0 auto 2rem;
+    max-width: 600px;
+    position: relative;
 }
 
 .flashcard-front, .flashcard-back {
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 250px;
 }
 
 .card-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 1.5rem;
+    flex-grow: 1;
+    justify-content: center;
 }
 
-.display-text {
-    font-size: 3rem;
-    font-weight: 700;
-    color: var(--primary);
-    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
-}
-
-.display-text.secondary {
-    font-size: 1.8rem;
-    color: #dc2626;
-    font-style: italic;
-}
-
-.btn-audio-large {
-    padding: 16px 32px;
-    background: var(--warning);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.3rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.btn-audio-large:hover {
-    background: #ea580c;
-    transform: scale(1.05);
-}
-
-.card-answer {
-    margin-bottom: 30px;
-}
-
-.card-answer h3 {
-    color: #64748b;
-    margin-bottom: 15px;
-}
-
-.answer-display {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--success);
-    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
-}
-
-.flip-button-container {
-    text-align: center;
-}
-
-.btn-flip {
-    padding: 16px 48px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.2rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.btn-flip:hover {
-    background: var(--secondary);
-    transform: translateY(-2px);
-}
-
-/* --- Quality Buttons --- */
-.quality-buttons {
-    margin-top: 20px;
-}
-
-.quality-label {
-    text-align: center;
-    color: #64748b;
-    margin-bottom: 20px;
-    font-weight: 600;
-}
-
-.quality-grid {
+/* Botones SM2 específicos */
+.sm2-buttons {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 1rem;
+    margin-top: 2rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.quality-btn {
-    padding: 16px;
-    border: 2px solid var(--border);
-    background: white;
+.sm2-btn {
+    padding: 1.5rem 1rem;
+    border: none;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-}
-
-.quality-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.quality-btn.q0:hover { border-color: #ef4444; background: #fef2f2; }
-.quality-btn.q1:hover { border-color: #f97316; background: #fff7ed; }
-.quality-btn.q2:hover { border-color: #f59e0b; background: #fffbeb; }
-.quality-btn.q3:hover { border-color: #84cc16; background: #f7fee7; }
-.quality-btn.q4:hover { border-color: #22c55e; background: #f0fdf4; }
-.quality-btn.q5:hover { border-color: #10b981; background: #ecfdf5; }
-
-.q-emoji {
-    font-size: 2rem;
-}
-
-.q-text {
-    font-size: 0.85rem;
+    gap: 0.5rem;
+    font-size: 1rem;
     font-weight: 600;
-    color: #64748b;
+    color: white;
 }
 
-/* --- Result Card --- */
-.result-card {
-    background: white;
-    border-radius: 16px;
-    padding: 40px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    text-align: center;
+.sm2-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-.result-card h2 {
-    color: var(--primary);
-    margin-bottom: 30px;
+.sm2-again {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.sm2-hard {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.sm2-easy {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.sm2-number {
     font-size: 2rem;
-}
-
-.result-stats {
-    margin-bottom: 30px;
-}
-
-.result-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border);
-}
-
-.result-item:last-child {
-    border-bottom: none;
-}
-
-.result-label {
-    color: #64748b;
-    font-weight: 500;
-}
-
-.result-value {
     font-weight: 700;
-    font-size: 1.2rem;
-    color: var(--text);
 }
 
-.result-item.success .result-value {
-    color: var(--success);
+.sm2-label {
+    font-size: 1.1rem;
 }
 
-.result-item.error .result-value {
-    color: var(--error);
+.sm2-sublabel {
+    font-size: 0.8rem;
+    opacity: 0.9;
 }
 
-.result-actions {
+/* Barra de progreso SM2 */
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    margin: 2rem 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
-    gap: 16px;
-    justify-content: center;
-}
-
-/* --- Progress Cards --- */
-.progress-header {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    justify-content: center;
+    font-weight: 600;
+    color: #1e293b;
 }
 
-#progress-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+/* Mensaje de finalización SM2 */
+.completion-message {
+    padding: 2rem;
 }
 
-.progress-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 2px solid var(--border);
-}
-
-.progress-card .progress-header {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 10px;
-}
-
-.progress-hanzi {
+.completion-message h2 {
+    color: #6366f1;
+    margin-bottom: 1.5rem;
     font-size: 2rem;
-    font-weight: 700;
-    color: var(--primary);
 }
 
-.progress-pinyin {
-    font-size: 1.2rem;
+/* Estilos específicos para texto de tarjetas SM2 */
+.hanzi-large {
+    font-size: 4rem;
+    font-weight: 700;
+    color: #6366f1;
+    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
+}
+
+.pinyin-text {
+    font-size: 2rem;
     color: #dc2626;
     font-style: italic;
 }
 
-.progress-details {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 12px;
+.answer-text {
+    font-size: 2.5rem;
+    color: #10b981;
+    font-weight: 700;
+    margin: 1rem 0;
 }
 
-.progress-stat {
-    display: flex;
-    justify-content: space-between;
-}
-
-.progress-stat .label {
-    color: #64748b;
-    font-size: 0.9rem;
-}
-
-.progress-stat .value {
-    font-weight: 600;
-    color: var(--text);
-}
-
-.progress-stat .value.success {
-    color: var(--success);
-}
-
-.progress-footer {
-    text-align: right;
-    color: #64748b;
-    font-size: 0.85rem;
-}
-
-.next-review {
-    font-style: italic;
-}
-
-/* --- Empty State --- */
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-}
-
-.empty-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-}
-
-.empty-state h3 {
-    color: var(--text);
-    font-size: 1.5rem;
-    margin-bottom: 12px;
-}
-
-.empty-state p {
-    color: #64748b;
-    margin-bottom: 12px;
-}
-
-.info-text {
-    font-weight: 600;
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    margin-top: 24px;
-    flex-wrap: wrap;
-}
-
-.empty-message, .error-message {
-    text-align: center;
-    padding: 40px;
-    color: #64748b;
-    font-style: italic;
-}
-
-.error-message {
-    color: var(--error);
-}
-
-/* --- Tarjetas Grupos --- */
-.tarjeta-grupo {
-    background: var(--card-bg);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 2px solid var(--border);
-    margin-bottom: 20px;
-}
-
-.tarjeta-grupo-header {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid var(--border);
-    margin-bottom: 15px;
-}
-
-.grupo-info {
-    flex-grow: 1;
-}
-
-.tarjetas-badge {
-    background: var(--primary);
+.audio-indicator {
+    background: #f59e0b;
     color: white;
-    padding: 6px 16px;
+    padding: 0.5rem 1rem;
     border-radius: 20px;
-    font-size: 0.85rem;
+    display: inline-block;
+    margin-bottom: 1rem;
     font-weight: 600;
-}
-
-.tarjeta-grupo-items {
-    display: grid;
-    gap: 12px;
-}
-
-.tarjeta-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-}
-
-.tarjeta-numero {
-    background: var(--primary);
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.9rem;
-    flex-shrink: 0;
-}
-
-.tarjeta-content {
-    flex-grow: 1;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.tarjeta-pregunta {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-    min-width: 200px;
-}
-
-.mostrado {
-    padding: 6px 12px;
-    background: #e0e7ff;
-    color: #4338ca;
-    border-radius: 6px;
-    font-weight: 600;
-}
-
-.mostrado.secondary {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.audio-icon {
-    font-size: 1.2rem;
-}
-
-.solo-audio {
-    color: #64748b;
-    font-style: italic;
-    font-size: 0.9rem;
-}
-
-.tarjeta-respuesta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.arrow {
-    color: #94a3b8;
-    font-size: 1.5rem;
-}
-
-.requerido {
-    padding: 8px 16px;
-    background: var(--success);
-    color: white;
-    border-radius: 6px;
-    font-weight: 600;
-}
-
-/* --- Navegación Inferior --- */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    display: flex;
-    justify-content: space-around;
-    padding: 12px 0;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.95);
-    z-index: 1000;
-}
-
-.nav-item {
-    text-decoration: none;
-    color: #94a3b8;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: all 0.3s ease;
-    padding: 8px 16px;
-    border-radius: 12px;
-    min-width: 70px;
-}
-
-.nav-item:hover {
-    color: var(--primary);
-    background: rgba(99, 102, 241, 0.1);
-}
-
-.nav-item.active {
-    color: var(--primary);
-    font-weight: 600;
-}
-
-.nav-item span:first-child {
-    font-size: 1.8rem;
-    margin-bottom: 4px;
-}
-
-.nav-icon {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-
-.nav-label {
-    font-size: 0.75rem;
-}
-
-/* --- Notificaciones --- */
-.notificacion {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 16px 24px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 2000;
-    opacity: 0;
-    transform: translateX(400px);
-    transition: all 0.3s ease;
-    font-weight: 500;
-    max-width: 400px;
-}
-
-.notificacion.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.notificacion-success {
-    background: var(--success);
-    color: white;
-}
-
-.notificacion-error {
-    background: var(--error);
-    color: white;
-}
-
-.notificacion-info {
-    background: var(--primary);
-    color: white;
-}
-
-.notificacion-warning {
-    background: var(--warning);
-    color: white;
-}
-
-/* --- Animaciones --- */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* --- Responsive --- */
-@media (max-width: 768px) {
-    body {
-        padding: 15px 15px 80px 15px;
-    }
-    
-    .card {
-        padding: 16px;
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .card-main-content {
-        flex-direction: column;
-        margin-bottom: 15px;
-    }
-    
-    .hanzi-lg {
-        font-size: 2.5rem;
-    }
-    
-    .info {
-        margin-left: 0;
-        margin-bottom: 15px;
-    }
-    
-    .btn-add, .btn-remove {
-        margin-left: 0;
-        width: 45px;
-        height: 45px;
-        font-size: 1.8rem;
-    }
-    
-    header h1 {
-        font-size: 2rem;
-    }
-    
-    .search-and-filters {
-        width: 100%;
-    }
-    
-    .filter-buttons {
-        width: 100%;
-    }
-    
-    .filter-btn {
-        flex: 1;
-        padding: 8px 12px;
-        font-size: 0.85rem;
-    }
-    
-    .sm2-dashboard {
-        grid-template-columns: 1fr;
-    }
-    
-    .quality-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .tarjeta-grupo-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .tarjeta-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .tarjeta-content {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-    }
-    
-    .notificacion {
-        left: 20px;
-        right: 20px;
-        max-width: none;
-    }
-    
-    .result-actions, .action-center {
-        flex-direction: column;
-    }
-    
-    .btn-large {
-        width: 100%;
-    }
-}
-
-/* --- Loading State --- */
-#lista-hsk:empty::before,
-#lista-diccionario:empty::before,
-#lista-tarjetas:empty::before {
-    content: "Cargando...";
-    text-align: center;
-    color: #94a3b8;
-    font-style: italic;
-    padding: 40px;
-    display: block;
 }
 
 /* ============================================================================
-   ESTILOS PARA EJEMPLOS
+   PÁGINA EJEMPLOS
    ============================================================================ */
 
 /* --- Tabs --- */
@@ -1348,216 +953,746 @@ header h1 {
 }
 
 /* ============================================================================
-   ESTILOS PARA SELECTOR DE HANZI FALLADOS
+   PÁGINA TARJETAS
    ============================================================================ */
 
-.hanzi-selector {
-    background: #f8fafc;
+/* --- Tarjetas Grupos --- */
+.tarjeta-grupo {
+    background: var(--card-bg);
     border-radius: 12px;
     padding: 20px;
-    margin: 20px 0;
-    border: 2px dashed #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--border);
+    margin-bottom: 20px;
 }
 
-.selector-label {
-    color: #64748b;
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin-bottom: 12px;
-}
-
-.hanzi-chips-container {
+.tarjeta-grupo-header {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 15px;
 }
 
-.hanzi-chip-selectable {
-    position: relative;
-    cursor: pointer;
+.grupo-info {
+    flex-grow: 1;
 }
 
-.hanzi-chip-selectable input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.hanzi-chip-selectable .hanzi-text {
-    display: inline-block;
-    background: #e0e7ff;
-    color: #4338ca;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 1.3rem;
-    font-weight: 700;
-    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
-    border: 3px solid transparent;
-    transition: all 0.2s;
-}
-
-.hanzi-chip-selectable:hover .hanzi-text {
-    background: #c7d2fe;
-    transform: scale(1.05);
-}
-
-.hanzi-chip-selectable input[type="checkbox"]:checked + .hanzi-text {
-    background: var(--error);
+.tarjetas-badge {
+    background: var(--primary);
     color: white;
-    border-color: #dc2626;
-    transform: scale(1.1);
-}
-
-.frase-fallada-check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    color: #475569;
-    font-weight: 500;
-}
-
-.frase-fallada-check input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-/* ============================================================================
-   ESTILOS PARA SISTEMA SM2 SIMPLIFICADO (0-2)
-   ============================================================================ */
-
-.study-info {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-}
-
-.card-type-badge {
-    padding: 6px 14px;
+    padding: 6px 16px;
     border-radius: 20px;
     font-size: 0.85rem;
-    font-weight: 700;
+    font-weight: 600;
 }
 
-.badge-ejemplo {
+.tarjeta-grupo-items {
+    display: grid;
+    gap: 12px;
+}
+
+.tarjeta-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.tarjeta-numero {
+    background: var(--primary);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.tarjeta-content {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.tarjeta-pregunta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 200px;
+}
+
+.mostrado {
+    padding: 6px 12px;
+    background: #e0e7ff;
+    color: #4338ca;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.mostrado.secondary {
     background: #fef3c7;
     color: #92400e;
 }
 
-.badge-palabra {
-    background: #dbeafe;
-    color: #1e40af;
+.audio-icon {
+    font-size: 1.2rem;
 }
 
-/* Quality Buttons Simple (0-2) */
-.quality-grid-simple {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+.solo-audio {
+    color: #64748b;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.tarjeta-respuesta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.arrow {
+    color: #94a3b8;
+    font-size: 1.5rem;
+}
+
+.requerido {
+    padding: 8px 16px;
+    background: var(--success);
+    color: white;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* ============================================================================
+   NAVEGACIÓN INFERIOR (para todas excepto SM2)
+   ============================================================================ */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 1000;
+}
+
+.nav-item {
+    text-decoration: none;
+    color: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+    padding: 8px 16px;
+    border-radius: 12px;
+    min-width: 70px;
+}
+
+.nav-item:hover {
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.nav-item.active {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.nav-item span:first-child {
+    font-size: 1.8rem;
+    margin-bottom: 4px;
+}
+
+.nav-icon {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.nav-label {
+    font-size: 0.75rem;
+}
+
+/* ============================================================================
+   NOTIFICACIONES
+   ============================================================================ */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    z-index: 2000;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: all 0.3s ease;
+    max-width: 400px;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.info {
+    background: var(--primary);
+}
+
+.notification.error {
+    background: var(--error);
+}
+
+.notification.success {
+    background: var(--success);
+}
+
+.notification.warning {
+    background: var(--warning);
+}
+
+/* ============================================================================
+   ESTADOS VACIOS Y ERRORES
+   ============================================================================ */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    color: var(--text);
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.empty-message, .error-message {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.error-message {
+    color: var(--error);
+}
+
+.info-text {
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.action-buttons {
+    display: flex;
     gap: 16px;
+    justify-content: center;
+    margin-top: 24px;
+    flex-wrap: wrap;
 }
 
-.quality-btn-simple {
-    padding: 20px;
-    border: 3px solid var(--border);
+/* ============================================================================
+   ANIMACIONES
+   ============================================================================ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* ============================================================================
+   ESTILOS ESPECÍFICOS PARA SM2.HTML
+   ============================================================================ */
+
+/* Barra de progreso */
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    margin: 30px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--primary);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Área de estudio */
+.study-area {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 2px solid var(--border);
+    margin-bottom: 30px;
+}
+
+/* Tarjeta flashcard */
+.flashcard {
     background: white;
     border-radius: 16px;
+    padding: 40px;
+    min-height: 300px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    border: 2px solid var(--primary);
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.flashcard-front, .flashcard-back {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+}
+
+.card-content {
+    text-align: center;
+    width: 100%;
+}
+
+.hanzi-large {
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
+    margin: 20px 0;
+}
+
+.pinyin-text {
+    font-size: 2.5rem;
+    color: #dc2626;
+    font-style: italic;
+    font-weight: 600;
+    margin: 20px 0;
+}
+
+.answer-text {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--success);
+    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
+    margin: 30px 0;
+    line-height: 1.2;
+}
+
+/* Botones SM2 específicos */
+.sm2-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 40px;
+    flex-wrap: wrap;
+}
+
+.sm2-btn {
+    padding: 20px 30px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    min-width: 120px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.quality-btn-simple:hover {
+.sm2-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sm2-btn:active {
+    transform: translateY(-2px);
+}
+
+.sm2-again {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.sm2-hard {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.sm2-easy {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.sm2-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.sm2-label {
+    font-size: 1.2rem;
+}
+
+.sm2-sublabel {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+/* Notificación */
+.notification {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    opacity: 0;
+    transform: translateY(100px);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    max-width: 400px;
+    backdrop-filter: blur(10px);
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.info {
+    background: rgba(99, 102, 241, 0.95);
+    color: white;
+    border: 2px solid var(--primary);
+}
+
+.notification.error {
+    background: rgba(239, 68, 68, 0.95);
+    color: white;
+    border: 2px solid var(--error);
+}
+
+.notification.success {
+    background: rgba(16, 185, 129, 0.95);
+    color: white;
+    border: 2px solid var(--success);
+}
+
+/* Mensaje de finalización */
+.completion-message {
+    padding: 40px;
+    background: linear-gradient(135deg, #f8fafc, #e0e7ff);
+    border-radius: 16px;
+    border: 2px solid var(--primary);
+}
+
+.completion-message h2 {
+    color: var(--primary);
+    margin-bottom: 20px;
+    font-size: 2.5rem;
+}
+
+.completion-message p {
+    font-size: 1.2rem;
+    color: #475569;
+    margin-bottom: 30px;
+}
+
+/* Indicador de audio */
+.audio-indicator {
+    background: var(--warning);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+/* Contenedor de estadísticas */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 2px solid var(--border);
+    transition: all 0.3s;
+}
+
+.stat-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary);
 }
 
-.quality-btn-simple.q0 {
-    border-color: #e2e8f0;
-}
-
-.quality-btn-simple.q0:hover {
-    border-color: #ef4444;
-    background: #fef2f2;
-}
-
-.quality-btn-simple.q1 {
-    border-color: #e2e8f0;
-}
-
-.quality-btn-simple.q1:hover {
-    border-color: #f59e0b;
-    background: #fffbeb;
-}
-
-.quality-btn-simple.q2 {
-    border-color: #e2e8f0;
-}
-
-.quality-btn-simple.q2:hover {
-    border-color: #10b981;
-    background: #ecfdf5;
-}
-
-.quality-btn-simple .q-emoji {
+.stat-value {
     font-size: 3rem;
-}
-
-.quality-btn-simple .q-text {
-    font-size: 1.1rem;
     font-weight: 700;
-    color: var(--text);
+    color: var(--primary);
+    margin-bottom: 8px;
 }
 
-.quality-btn-simple .q-subtext {
-    font-size: 0.85rem;
+.stat-label {
     color: #64748b;
-}
-
-/* --- Progress Cards Mejoradas --- */
-.progress-card.inactiva {
-    opacity: 0.6;
-    background: linear-gradient(to right, #ffffff, #f8fafc);
-}
-
-.badge-pausada {
-    background: #e2e8f0;
-    color: #475569;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     font-weight: 600;
 }
 
-.estado-nuevo {
+/* Texto de ayuda */
+.help-text {
     color: #64748b;
+    font-size: 0.95rem;
+    margin-top: 20px;
+    font-style: italic;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
 }
 
-.estado-aprendiendo {
-    color: #f59e0b;
-    font-weight: 600;
+/* Botón grande */
+.btn-large {
+    padding: 20px 40px !important;
+    font-size: 1.3rem !important;
+    border-radius: 12px !important;
+    margin: 10px;
 }
 
-.estado-dominada {
-    color: var(--success);
-    font-weight: 600;
-}
-
-.estado-matura {
-    color: #10b981;
-    font-weight: 700;
-}
-
-/* ============================================================================
-   RESPONSIVE PARA NUEVOS ELEMENTOS
-   ============================================================================ */
-
+/* Responsive para SM2 */
 @media (max-width: 768px) {
+    .sm2-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .sm2-btn {
+        width: 100%;
+        max-width: 250px;
+    }
+    
+    .flashcard {
+        padding: 20px;
+        min-height: 250px;
+    }
+    
+    .hanzi-large {
+        font-size: 3rem;
+    }
+    
+    .pinyin-text {
+        font-size: 1.8rem;
+    }
+    
+    .answer-text {
+        font-size: 2.5rem;
+    }
+    
+    .notification {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+        bottom: 80px;
+    }
+    
+    .study-area {
+        padding: 20px;
+    }
+}
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+@media (max-width: 768px) {
+    body:not(.sm2-page) {
+        padding: 15px 15px 80px 15px;
+    }
+    
+    .card {
+        padding: 16px;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .card-main-content {
+        flex-direction: column;
+        margin-bottom: 15px;
+    }
+    
+    .hanzi-lg {
+        font-size: 2.5rem;
+    }
+    
+    .info {
+        margin-left: 0;
+        margin-bottom: 15px;
+    }
+    
+    .btn-add, .btn-remove {
+        margin-left: 0;
+        width: 45px;
+        height: 45px;
+        font-size: 1.8rem;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    .search-and-filters {
+        width: 100%;
+    }
+    
+    .filter-buttons {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .tarjeta-grupo-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tarjeta-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tarjeta-content {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    
+    .notification {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-large {
+        width: 100%;
+    }
+    
+    /* Responsive para SM2 */
+    .nav-links {
+        gap: 0.5rem;
+    }
+    
+    .nav-links a {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .sm2-page .container {
+        padding: 0 1rem;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    
+    .flashcard {
+        padding: 1.5rem;
+        min-height: 250px;
+    }
+    
+    .hanzi-large {
+        font-size: 3rem;
+    }
+    
+    .pinyin-text {
+        font-size: 1.5rem;
+    }
+    
+    .answer-text {
+        font-size: 2rem;
+    }
+    
+    .sm2-buttons {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .sm2-btn {
+        padding: 1rem;
+    }
+    
+    /* Responsive para Ejemplos */
     .ejemplo-card {
         padding: 16px;
     }
@@ -1576,19 +1711,6 @@ header h1 {
         flex-wrap: wrap;
     }
     
-    .quality-grid-simple {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .quality-btn-simple {
-        padding: 16px;
-    }
-    
-    .hanzi-chips-container {
-        justify-content: center;
-    }
-    
     .tabs {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -1598,4 +1720,18 @@ header h1 {
         white-space: nowrap;
         padding: 10px 16px;
     }
+}
+
+/* ============================================================================
+   LOADING STATE
+   ============================================================================ */
+#lista-hsk:empty::before,
+#lista-diccionario:empty::before,
+#lista-tarjetas:empty::before {
+    content: "Cargando...";
+    text-align: center;
+    color: #94a3b8;
+    font-style: italic;
+    padding: 40px;
+    display: block;
 }

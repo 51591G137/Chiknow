@@ -346,20 +346,22 @@ def obtener_tarjetas_completas(db: Session):
     
     resultado = []
     for tarjeta, hsk in tarjetas:
-        resultado.append({
-            "id": tarjeta.id,
-            "hsk_id": tarjeta.hsk_id,
-            "diccionario_id": tarjeta.diccionario_id,
-            "ejemplo_id": tarjeta.ejemplo_id,
-            "hanzi": hsk.hanzi if hsk else None,
-            "pinyin": hsk.pinyin if hsk else None,
-            "espanol": hsk.espanol if hsk else None,
-            "mostrado1": tarjeta.mostrado1,
-            "mostrado2": tarjeta.mostrado2,
-            "audio": tarjeta.audio,
-            "requerido": tarjeta.requerido,
-            "activa": tarjeta.activa
-        })
+        # Solo procesar tarjetas de palabras (no ejemplos por ahora)
+        if tarjeta.hsk_id and hsk:
+            resultado.append({
+                "id": tarjeta.id,
+                "hsk_id": tarjeta.hsk_id,
+                "diccionario_id": tarjeta.diccionario_id,
+                "ejemplo_id": tarjeta.ejemplo_id,
+                "hanzi": hsk.hanzi,
+                "pinyin": hsk.pinyin,
+                "espanol": hsk.espanol,
+                "mostrado1": tarjeta.mostrado1,
+                "mostrado2": tarjeta.mostrado2,
+                "audio": tarjeta.audio,
+                "requerido": tarjeta.requerido,
+                "activa": tarjeta.activa
+            })
     
     return resultado
 

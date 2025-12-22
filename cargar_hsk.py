@@ -1,39 +1,111 @@
+#!/usr/bin/env python3
+"""
+Script para cargar datos HSK desde CSV SIN CABECERA
+Uso: python3 cargar_hsk_sin_cabecera.py
+"""
+
 import csv
-from main import SessionLocal, HSK
+from database import SessionLocal, engine
+import models
 
-# Iniciamos la sesión de la base de datos
-db = SessionLocal()
+# Crear todas las tablas
+models.Base.metadata.create_all(bind=engine)
 
-try:
-    # Abrimos el archivo CSV. 
-    # 'utf-8-sig' es la clave para que lea bien los caracteres chinos (Hanzi) y el pinyin
-    with open('datos.csv', mode='r', encoding='utf-8-sig') as archivo:
-        # Usamos el lector de CSV estándar
-        lector = csv.reader(archivo)
-        
-        print("Empezando la carga de datos...")
-        
-        for fila in lector:
-            # Según tu ejemplo: 1,1,çˆ±,Ã i,"amar, querer"
-            # fila[0] = numero, fila[1] = nivel, fila[2] = hanzi, fila[3] = pinyin, fila[4] = espanol
+def cargar_hsk_desde_csv(archivo_csv='datos.csv'):
+    """Carga datos HSK desde un archivo CSV sin cabecera"""
+    db = SessionLocal()
+    
+    try:
+        # Verificar si ya hay datos
+        count = db.query(models.HSK).count()
+        if count > 0:
+            print(f"⚠️  Ya hay {count} palabras en la base de datos.")
+            respuesta = input("¿Quieres eliminarlas y recargar? (s/n): ")
+            if respuesta.lower() != 's':
+                print("❌ Cancelado")
+                return
             
-            nueva_palabra = HSK(
-                numero=int(fila[0]),
-                nivel=int(fila[1]),
-                hanzi=fila[2],
-                pinyin=fila[3],
-                espanol=fila[4]
-            )
-            db.add(nueva_palabra)
+            # Eliminar datos existentes
+            db.query(models.HSK).delete()
+            db.commit()
+            print("✅ Datos antiguos eliminados")
         
-        # Guardamos todos los cambios en la base de datos
+        # Leer CSV SIN CABECERA
+        palabras = []
+        with open(archivo_csv, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if len(row) >= 5:  # Asegurar que tiene todas las columnas
+                    palabras.append(row)
+        
+        print(f"📖 Leyendo {len(palabras)} palabras desde {archivo_csv}...")
+        
+        # Insertar palabras
+        errores = 0
+        for i, row in enumerate(palabras, 1):
+            try:
+                palabra = models.HSK(
+                    numero=int(row[0]),      # Primera columna: numero
+                    nivel=int(row[1]),       # Segunda columna: nivel
+                    hanzi=row[2],            # Tercera columna: hanzi
+                    pinyin=row[3],           # Cuarta columna: pinyin
+                    espanol=row[4]           # Quinta columna: espanol
+                )
+                db.add(palabra)
+                
+                if i % 100 == 0:
+                    print(f"  Procesadas {i}/{len(palabras)}...")
+                    
+            except (ValueError, IndexError) as e:
+                errores += 1
+                print(f"  ⚠️  Error en línea {i}: {e}")
+                if errores > 10:
+                    print(f"  ❌ Demasiados errores, abortando...")
+                    raise
+        
         db.commit()
-        print("¡Carga completada con éxito!")
+        
+        # Verificar
+        total = db.query(models.HSK).count()
+        print(f"\n✅ ¡Éxito! Se cargaron {total} palabras HSK")
+        if errores > 0:
+            print(f"⚠️  Hubo {errores} errores al procesar algunas líneas")
+        
+        # Mostrar algunas palabras de ejemplo
+        print("\n📝 Primeras 10 palabras cargadas:")
+        ejemplos = db.query(models.HSK).order_by(models.HSK.numero).limit(10).all()
+        for palabra in ejemplos:
+            print(f"  {palabra.numero}. {palabra.hanzi} ({palabra.pinyin}) - {palabra.espanol} [HSK{palabra.nivel}]")
+        
+        print("\n📝 Últimas 5 palabras cargadas:")
+        ultimas = db.query(models.HSK).order_by(models.HSK.numero.desc()).limit(5).all()
+        for palabra in reversed(ultimas):
+            print(f"  {palabra.numero}. {palabra.hanzi} ({palabra.pinyin}) - {palabra.espanol} [HSK{palabra.nivel}]")
+        
+    except FileNotFoundError:
+        print(f"❌ ERROR: No se encontró el archivo '{archivo_csv}'")
+        print("\nAsegúrate de que el archivo existe en el directorio actual")
+        print("Formato esperado (SIN cabecera):")
+        print("1,1,爱,ài,amar")
+        print("2,1,八,bā,ocho")
+        print("...")
+        
+    except Exception as e:
+        print(f"❌ ERROR: {e}")
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        
+    finally:
+        db.close()
 
-except FileNotFoundError:
-    print("Error: No se encontró el archivo 'datos.csv'. Asegúrate de subirlo a la misma carpeta.")
-except Exception as e:
-    db.rollback() # Si algo falla, deshacemos los cambios para no corromper la DB
-    print(f"Hubo un error durante la carga: {e}")
-finally:
-    db.close() # Siempre cerramos la conexión al terminar
+if __name__ == "__main__":
+    print("="*60)
+    print("CARGADOR DE DATOS HSK (CSV SIN CABECERA)")
+    print("="*60)
+    print("\nFormato esperado del CSV:")
+    print("  numero,nivel,hanzi,pinyin,espanol")
+    print("  1,1,爱,ài,amar")
+    print("  2,1,八,bā,ocho")
+    print()
+    cargar_hsk_desde_csv()

@@ -124,7 +124,7 @@ def get_tarjetas_by_hsk_id(db: Session, hsk_id: int):
 
 def get_all_tarjetas_with_info(db: Session):
     """Obtiene todas las tarjetas con información completa"""
-    return db.query(models.Tarjeta, models.HSK).join(
+    return db.query(models.Tarjeta, models.HSK).outerjoin(
         models.HSK, models.Tarjeta.hsk_id == models.HSK.id
     ).all()
 
