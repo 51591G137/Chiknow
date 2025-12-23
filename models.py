@@ -20,6 +20,7 @@ class Diccionario(Base):
     id = Column(Integer, primary_key=True, index=True)
     hsk_id = Column(Integer, ForeignKey("hsk.id"))
     activo = Column(Boolean, default=True)  # Se desactiva cuando una frase lo contiene y está dominada
+    notas = Column(Text, nullable=True)
 
 class Tarjeta(Base):
     __tablename__ = "tarjetas"

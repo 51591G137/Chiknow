@@ -1279,3 +1279,219 @@ header h1 {
         padding: 10px 16px;
     }
 }
+
+/* ============================================================================
+   PÁGINA SM2 - COMPONENTES ESPECÍFICOS
+   ============================================================================ */
+
+/* Contenedor de respuesta del usuario */
+.respuesta-usuario-container {
+    margin: 1.5rem 0;
+    width: 100%;
+    max-width: 500px;
+}
+
+.respuesta-usuario-container label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.respuesta-usuario-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.respuesta-usuario-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Comparación de respuestas */
+.comparacion-respuestas {
+    display: grid;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    max-width: 500px;
+}
+
+.respuesta-box {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid;
+}
+
+.respuesta-usuario-box {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.respuesta-usuario-box .label {
+    color: #92400e;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.respuesta-usuario-box .texto {
+    color: #78350f;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.respuesta-correcta-box {
+    background: #dcfce7;
+    border-color: #10b981;
+}
+
+.respuesta-correcta-box .label {
+    color: #166534;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.respuesta-correcta-box .texto {
+    color: #166534;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Botones de acción para respuesta */
+.acciones-respuesta {
+    margin: 1.5rem 0;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+/* Modal estadísticas */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: #64748b;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #ef4444;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.stat-item-detail {
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-item-detail div {
+    color: #64748b;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-item-detail strong {
+    display: block;
+    font-size: 1.8rem;
+    color: #6366f1;
+}
+
+.btn-stats {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 100;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    transition: all 0.2s;
+}
+
+.btn-stats:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+/* Estilos dinámicos para detección automática */
+.respuesta-usuario-box.respuesta-correcta {
+    background: #dcfce7;
+    border-color: #10b981;
+}
+
+.respuesta-usuario-box.respuesta-correcta .label,
+.respuesta-usuario-box.respuesta-correcta .texto {
+    color: #166534;
+}
+
+.respuesta-usuario-box.respuesta-incorrecta {
+    background: #fee2e2;
+    border-color: #ef4444;
+}
+
+.respuesta-usuario-box.respuesta-incorrecta .label,
+.respuesta-usuario-box.respuesta-incorrecta .texto {
+    color: #991b1b;
+}
+
+.respuesta-usuario-box.respuesta-vacia {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.respuesta-usuario-box.respuesta-vacia .label,
+.respuesta-usuario-box.respuesta-vacia .texto {
+    color: #6b7280;
+}

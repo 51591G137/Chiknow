@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import repository
 import json
+import models
 
 # ============================================================================
 # FUNCIONES DICCIONARIO
@@ -98,6 +99,56 @@ def buscar_en_diccionario(db: Session, query: str):
         })
     
     return resultado
+
+def añadir_traduccion_alternativa(db: Session, hsk_id: int, traduccion: str):
+    palabra = repository.get_hsk_by_id(db, hsk_id)
+    
+    if not palabra:
+        return {"error": "Palabra no encontrada"}
+    
+    traducciones_actuales = [t.strip() for t in palabra.espanol.split(',')]
+    traduccion_limpia = traduccion.strip()
+    
+    if traduccion_limpia in traducciones_actuales:
+        return {"error": "La traducción ya existe"}
+    
+    # Añadir traducción
+    nuevo_espanol = palabra.espanol + ", " + traduccion_limpia
+    palabra.espanol = nuevo_espanol
+    db.commit()
+    
+    # Actualizar todas las tarjetas asociadas a esta palabra
+    actualizar_tarjetas_por_hsk_id(db, hsk_id, nuevo_espanol)
+    
+    return {
+        "status": "ok",
+        "message": "Traducción añadida",
+        "espanol": nuevo_espanol
+    }
+
+def actualizar_tarjetas_por_hsk_id(db: Session, hsk_id: int, nuevo_requerido: str):
+    """
+    Actualiza el campo 'requerido' de todas las tarjetas asociadas a un hsk_id
+    manteniendo el progreso SM2 y los IDs originales
+    """
+    # Buscar todas las tarjetas asociadas a este hsk_id
+    tarjetas = db.query(repository.models.Tarjeta).filter(
+        repository.models.Tarjeta.hsk_id == hsk_id
+    ).all()
+    
+    for tarjeta in tarjetas:
+        # Determinar el nuevo valor para 'requerido' basado en el tipo de tarjeta
+        if tarjeta.mostrado1 and tarjeta.mostrado1 == tarjeta.requerido:
+            # Tarjeta de tipo: Español → Hanzi (requerido es hanzi, no cambiar)
+            pass  # No cambiar, el hanzi sigue siendo el mismo
+        elif tarjeta.mostrado1 and any(trad in tarjeta.mostrado1 for trad in ['espanol', 'español']):
+            # Tarjeta de tipo: Hanzi → Español (requerido es español, actualizar)
+            tarjeta.requerido = nuevo_requerido
+        elif not tarjeta.mostrado1 and not tarjeta.mostrado2 and tarjeta.audio:
+            # Tarjeta de tipo: Audio → Español (requerido es español, actualizar)
+            tarjeta.requerido = nuevo_requerido
+    
+    db.commit()
 
 # ============================================================================
 # FUNCIONES EJEMPLOS
@@ -336,6 +387,59 @@ def obtener_ejemplos_en_estudio(db: Session):
     
     return resultado
 
+def obtener_todos_ejemplos(db: Session):
+    ejemplos = db.query(models.Ejemplo).all()
+    
+    resultado = []
+    for ejemplo in ejemplos:
+        hanzi_relaciones = repository.get_hanzi_de_ejemplo(db, ejemplo.id)
+        hanzi_lista = [hsk.hanzi for rel, hsk in hanzi_relaciones]
+        
+        num_tarjetas = db.query(models.Tarjeta).filter(
+            models.Tarjeta.ejemplo_id == ejemplo.id
+        ).count()
+        
+        resultado.append({
+            "id": ejemplo.id,
+            "hanzi": ejemplo.hanzi,
+            "pinyin": ejemplo.pinyin,
+            "espanol": ejemplo.espanol,
+            "nivel": ejemplo.nivel,
+            "complejidad": ejemplo.complejidad,
+            "activado": ejemplo.activado,
+            "en_diccionario": ejemplo.en_diccionario,
+            "hanzi_componentes": hanzi_lista,
+            "num_tarjetas": num_tarjetas
+        })
+    
+    return resultado
+
+def obtener_ejemplos_por_hanzi(db: Session, hsk_id: int):
+    relaciones = db.query(models.HSKEjemplo, models.Ejemplo).join(
+        models.Ejemplo, models.HSKEjemplo.ejemplo_id == models.Ejemplo.id
+    ).filter(
+        models.HSKEjemplo.hsk_id == hsk_id
+    ).all()
+    
+    resultado = []
+    for rel, ejemplo in relaciones:
+        hanzi_relaciones = repository.get_hanzi_de_ejemplo(db, ejemplo.id)
+        hanzi_lista = [hsk.hanzi for rel_inner, hsk in hanzi_relaciones]
+        
+        resultado.append({
+            "id": ejemplo.id,
+            "hanzi": ejemplo.hanzi,
+            "pinyin": ejemplo.pinyin,
+            "espanol": ejemplo.espanol,
+            "nivel": ejemplo.nivel,
+            "complejidad": ejemplo.complejidad,
+            "activado": ejemplo.activado,
+            "en_diccionario": ejemplo.en_diccionario,
+            "hanzi_componentes": hanzi_lista
+        })
+    
+    return resultado
+
 # ============================================================================
 # FUNCIONES TARJETAS
 # ============================================================================
@@ -464,6 +568,7 @@ def obtener_tarjetas_para_estudiar(db: Session, limite: int = 20):
             resultado.append({
                 "tarjeta_id": tarjeta.id,
                 "tipo": "palabra",
+                "hsk_id": hsk.id,
                 "hanzi": hsk.hanzi,
                 "pinyin": hsk.pinyin,
                 "espanol": hsk.espanol,
@@ -557,7 +662,7 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
         prev_interval, new_interval,
         prev_estado, new_estado,
         hanzi_fallados, frase_fallada,
-        respuesta_usuario  # NUEVO
+        respuesta_usuario
     )
     
     # Si es un ejemplo y fallaron hanzi específicos, reactivarlos

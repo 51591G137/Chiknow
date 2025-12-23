@@ -18,6 +18,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="disponibles">Disponibles</button>
             <button class="tab-btn" data-tab="estudiando">En Estudio</button>
+            <button class="tab-btn" data-tab="todos">Todos (BD)</button>
         </div>
 
         <!-- Tab: Ejemplos Disponibles -->
@@ -38,6 +39,19 @@
                 </div>
             </div>
             <div id="lista-estudiando"></div>
+        </section>
+
+        <!-- Tab: Todos los Ejemplos (BD) -->
+        <section id="tab-todos" class="tab-content">
+            <div class="section-header">
+                <h2>Todos los Ejemplos (Base de Datos)</h2>
+                <div class="stats">
+                    <span class="stat-item">Total: <strong id="total-bd">0</strong></span>
+                    <span class="stat-item">Activados: <strong id="total-activados">0</strong></span>
+                    <span class="stat-item">En estudio: <strong id="total-estudiando-bd">0</strong></span>
+                </div>
+            </div>
+            <div id="lista-todos"></div>
         </section>
     </main>
 
@@ -67,6 +81,7 @@
     <script>
         let ejemplosDisponibles = [];
         let ejemplosEstudiando = [];
+        let todosEjemplos = [];
 
         async function cargarEjemplosDisponibles() {
             try {
@@ -90,6 +105,26 @@
                 console.error('Error:', error);
                 document.getElementById('lista-estudiando').innerHTML = 
                     '<p class="error-message">Error al cargar ejemplos en estudio</p>';
+            }
+        }
+
+        async function cargarTodosEjemplos() {
+            try {
+                const res = await fetch('/api/ejemplos/todos');
+                todosEjemplos = await res.json();
+                
+                // Actualizar estadísticas
+                document.getElementById('total-bd').textContent = todosEjemplos.length;
+                document.getElementById('total-activados').textContent = 
+                    todosEjemplos.filter(e => e.activado).length;
+                document.getElementById('total-estudiando-bd').textContent = 
+                    todosEjemplos.filter(e => e.en_diccionario).length;
+                
+                renderizarTodos();
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('lista-todos').innerHTML = 
+                    '<p class="error-message">Error al cargar todos los ejemplos</p>';
             }
         }
 
@@ -188,6 +223,63 @@
             }).join('');
         }
 
+        function renderizarTodos() {
+            const contenedor = document.getElementById('lista-todos');
+            
+            if (todosEjemplos.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📚</div>
+                        <h3>No hay ejemplos en la base de datos</h3>
+                        <p>Carga ejemplos usando el script cargar_ejemplos.py</p>
+                    </div>
+                `;
+                return;
+            }
+
+            contenedor.innerHTML = todosEjemplos.map(ej => {
+                const badgeClass = ej.complejidad === 1 ? 'badge-simple' : 
+                                  ej.complejidad === 2 ? 'badge-medio' : 'badge-complejo';
+                
+                // Estados
+                let estadoHTML = '';
+                if (ej.en_diccionario) {
+                    estadoHTML = '<span class="estado-badge estado-dominado">📚 En estudio</span>';
+                } else if (ej.activado) {
+                    estadoHTML = '<span class="estado-badge estado-aprendiendo">✓ Activado</span>';
+                } else {
+                    estadoHTML = '<span class="estado-badge" style="background:#e2e8f0;color:#64748b;">○ No activado</span>';
+                }
+                
+                return `
+                    <div class="ejemplo-card">
+                        <div class="ejemplo-header">
+                            <div class="hanzi-ejemplo">${ej.hanzi}</div>
+                            <div class="badges">
+                                <span class="complejidad-badge ${badgeClass}">
+                                    ${ej.complejidad === 1 ? 'Simple' : ej.complejidad === 2 ? 'Medio' : 'Complejo'}
+                                </span>
+                                ${estadoHTML}
+                            </div>
+                        </div>
+                        <div class="ejemplo-content">
+                            <div class="pinyin-ejemplo">${ej.pinyin}</div>
+                            <div class="espanol-ejemplo">${ej.espanol}</div>
+                            <div class="hanzi-componentes">
+                                <span class="componentes-label">Hanzi:</span>
+                                ${ej.hanzi_componentes.map(h => `<span class="hanzi-chip">${h}</span>`).join('')}
+                            </div>
+                            <div class="ejemplo-stats">
+                                <span class="stat">🆔 ID: ${ej.id}</span>
+                                <span class="stat">🎯 HSK ${ej.nivel}</span>
+                                <span class="stat">📇 ${ej.num_tarjetas || 0} tarjetas</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         async function añadirEjemplo(id) {
             try {
                 const res = await fetch(`/api/ejemplos/add/${id}`, { method: 'POST' });
@@ -199,6 +291,7 @@
                     mostrarNotificacion('✓ Ejemplo añadido (6 tarjetas creadas)', 'success');
                     await cargarEjemplosDisponibles();
                     await cargarEjemplosEstudiando();
+                    await cargarTodosEjemplos();
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -221,6 +314,7 @@
                     mostrarNotificacion('✓ Ejemplo eliminado', 'success');
                     await cargarEjemplosDisponibles();
                     await cargarEjemplosEstudiando();
+                    await cargarTodosEjemplos();
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -260,6 +354,7 @@
         window.onload = async () => {
             await cargarEjemplosDisponibles();
             await cargarEjemplosEstudiando();
+            await cargarTodosEjemplos();
         };
     </script>
 </body>

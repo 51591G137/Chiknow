@@ -35,6 +35,9 @@ class ReviewRequest(BaseModel):
     frase_fallada: bool = False
     respuesta_usuario: Optional[str] = None
 
+class NotasRequest(BaseModel):
+    notas: str
+
 # --- RUTAS DE NAVEGACIÓN (FRONTEND) ---
 
 @app.get("/")
@@ -100,6 +103,11 @@ def api_buscar_hsk(query: str = Query(""), db: Session = Depends(database.get_db
     
     return resultado
 
+@app.post("/api/hsk/add-traduccion/{hsk_id}")
+def api_añadir_traduccion(hsk_id: int, traduccion: str = Query(...), db: Session = Depends(database.get_db)):
+    """Añade una traducción alternativa a una palabra HSK"""
+    return service.añadir_traduccion_alternativa(db, hsk_id, traduccion)
+
 # --- RUTAS DE API DICCIONARIO ---
 
 @app.post("/api/diccionario/add/{hsk_id}")
@@ -129,7 +137,27 @@ def api_ver_diccionario(db: Session = Depends(database.get_db)):
 def api_buscar_diccionario(query: str = Query(""), db: Session = Depends(database.get_db)):
     return service.buscar_en_diccionario(db, query)
 
+@app.get("/api/diccionario/{diccionario_id}/notas")
+def api_obtener_notas(diccionario_id: int, db: Session = Depends(database.get_db)):
+    """Obtiene las notas de una entrada del diccionario"""
+    return repository.get_notas_diccionario(db, diccionario_id)
+
+@app.post("/api/diccionario/{diccionario_id}/notas")
+def api_actualizar_notas(diccionario_id: int, request: NotasRequest, db: Session = Depends(database.get_db)):
+    """Actualiza las notas de una entrada del diccionario"""
+    return repository.update_notas_diccionario(db, diccionario_id, request.notas)
+
 # --- RUTAS DE API EJEMPLOS ---
+
+@app.get("/api/ejemplos/todos")
+def api_todos_ejemplos(db: Session = Depends(database.get_db)):
+    """Obtiene TODOS los ejemplos de la base de datos"""
+    return service.obtener_todos_ejemplos(db)
+
+@app.get("/api/ejemplos/por-hanzi/{hsk_id}")
+def api_ejemplos_por_hanzi(hsk_id: int, db: Session = Depends(database.get_db)):
+    """Obtiene ejemplos que contienen un hanzi específico"""
+    return service.obtener_ejemplos_por_hanzi(db, hsk_id)
 
 @app.get("/api/ejemplos/disponibles")
 def api_ejemplos_disponibles(db: Session = Depends(database.get_db)):
@@ -203,9 +231,6 @@ def api_procesar_respuesta(
     """
     Procesa una respuesta del usuario
     quality: 0-2 (0=Again, 1=Hard, 2=Easy)
-    hanzi_fallados: Lista de hanzi que fallaron (solo para ejemplos)
-    frase_fallada: Si falló la estructura (solo para ejemplos)
-    respuesta_usuario: Lo que el usuario escribió/pensó (opcional)
     """
     if review.quality < 0 or review.quality > 2:
         return {"error": "Quality debe estar entre 0 y 2"}

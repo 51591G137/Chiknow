@@ -5,169 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudio SM2 - Chiknow</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        /* Estilos adicionales para respuesta usuario */
-        .respuesta-usuario-container {
-            margin: 1.5rem 0;
-            width: 100%;
-            max-width: 500px;
-        }
-        
-        .respuesta-usuario-container label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #64748b;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        .respuesta-usuario-input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-        
-        .respuesta-usuario-input:focus {
-            outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-        
-        .comparacion-respuestas {
-            display: grid;
-            gap: 1rem;
-            margin: 1.5rem 0;
-            max-width: 500px;
-        }
-        
-        .respuesta-box {
-            padding: 1rem;
-            border-radius: 8px;
-            border: 2px solid;
-        }
-        
-        .respuesta-usuario-box {
-            background: #fef3c7;
-            border-color: #f59e0b;
-        }
-        
-        .respuesta-usuario-box .label {
-            color: #92400e;
-            font-weight: 700;
-            font-size: 0.85rem;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-        }
-        
-        .respuesta-usuario-box .texto {
-            color: #78350f;
-            font-size: 1.3rem;
-            font-weight: 600;
-        }
-        
-        .respuesta-correcta-box {
-            background: #dcfce7;
-            border-color: #10b981;
-        }
-        
-        .respuesta-correcta-box .label {
-            color: #166534;
-            font-weight: 700;
-            font-size: 0.85rem;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-        }
-        
-        .respuesta-correcta-box .texto {
-            color: #166534;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        
-        /* Modal estadísticas */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        .modal.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            cursor: pointer;
-            font-size: 1.5rem;
-            color: #64748b;
-            transition: color 0.2s;
-        }
-        .modal-close:hover {
-            color: #ef4444;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-        .stat-item-detail {
-            padding: 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .stat-item-detail div {
-            color: #64748b;
-            font-size: 0.85rem;
-            margin-bottom: 0.5rem;
-        }
-        .stat-item-detail strong {
-            display: block;
-            font-size: 1.8rem;
-            color: #6366f1;
-        }
-        .btn-stats {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            padding: 0.75rem 1.25rem;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            z-index: 100;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-            transition: all 0.2s;
-        }
-        .btn-stats:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-        }
-    </style>
 </head>
 <body>
 
@@ -244,6 +81,18 @@
                             <div class="label">✅ Respuesta correcta</div>
                             <div class="texto" id="respuesta-correcta-texto">-</div>
                         </div>
+                    </div>
+                    
+                    <!-- Botones de acción para la respuesta -->
+                    <div class="acciones-respuesta">
+                        <button onclick="editarRespuesta()" class="btn btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <span>✏️</span>
+                            <span>Editar respuesta</span>
+                        </button>
+                        <button onclick="anadirTraduccion()" class="btn btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <span>➕</span>
+                            <span>Añadir como válida</span>
+                        </button>
                     </div>
                     
                     <!-- Botones SM2 -->
@@ -329,26 +178,26 @@
     </div>
 
     <nav class="bottom-nav">
-    <a href="/" class="nav-item">
-        <span class="nav-icon">3.0</span>
-        <span class="nav-label">HSK</span>
-    </a>
-    <a href="/diccionario" class="nav-item">
-        <span class="nav-icon">📖</span>
-        <span class="nav-label">Diccionario</span>
-    </a>
-    <a href="/ejemplos" class="nav-item">
-        <span>💬</span>
-        <span class="nav-label">Ejemplos</span>
-    </a>
-    <a href="/tarjetas" class="nav-item">
-        <span>🗂️</span>
-        <span class="nav-label">Tarjetas</span>
-    </a>
-    <a href="/sm2" class="nav-item active">
-        <span>🧠</span>
-        <span class="nav-label">Estudiar</span>
-    </a>
+        <a href="/" class="nav-item">
+            <span class="nav-icon">3.0</span>
+            <span class="nav-label">HSK</span>
+        </a>
+        <a href="/diccionario" class="nav-item">
+            <span class="nav-icon">📖</span>
+            <span class="nav-label">Diccionario</span>
+        </a>
+        <a href="/ejemplos" class="nav-item">
+            <span>💬</span>
+            <span class="nav-label">Ejemplos</span>
+        </a>
+        <a href="/tarjetas" class="nav-item">
+            <span>🗂️</span>
+            <span class="nav-label">Tarjetas</span>
+        </a>
+        <a href="/sm2" class="nav-item active">
+            <span>🧠</span>
+            <span class="nav-label">Estudiar</span>
+        </a>
     </nav>
 
     <div id="notification" class="notification"></div>
@@ -464,9 +313,41 @@
             
             // Mostrar comparación de respuestas
             document.getElementById('tu-respuesta-texto').textContent = respuestaUsuario || '(sin respuesta)';
-            document.getElementById('respuesta-correcta-texto').textContent = tarjetaActual.requerido;
             
-            // Voltear
+            // Usar espanol si existe, sino usar requerido
+            const respuestaCorrecta = tarjetaActual.espanol || tarjetaActual.requerido;
+            document.getElementById('respuesta-correcta-texto').textContent = respuestaCorrecta;
+            
+            // DETECCIÓN AUTOMÁTICA: Verificar si la respuesta es correcta
+            const respuestaUsuarioBox = document.querySelector('.respuesta-usuario-box');
+            
+            // Remover clases anteriores
+            respuestaUsuarioBox.classList.remove('respuesta-correcta', 'respuesta-incorrecta', 'respuesta-vacia');
+            
+            if (respuestaUsuario && respuestaCorrecta) {
+                // Separar las respuestas válidas (pueden ser múltiples separadas por comas)
+                const respuestasValidas = respuestaCorrecta.split(',').map(r => r.trim().toLowerCase());
+                const respuestaUsuarioLower = respuestaUsuario.toLowerCase();
+                
+                // Verificar si coincide con alguna respuesta válida
+                const esCorrecta = respuestasValidas.some(valida => 
+                    respuestaUsuarioLower === valida || 
+                    respuestaUsuarioLower.includes(valida) ||
+                    valida.includes(respuestaUsuarioLower)
+                );
+                
+                // Aplicar clase según si es correcta o no
+                if (esCorrecta) {
+                    respuestaUsuarioBox.classList.add('respuesta-correcta');
+                } else {
+                    respuestaUsuarioBox.classList.add('respuesta-incorrecta');
+                }
+            } else if (!respuestaUsuario) {
+                // Sin respuesta
+                respuestaUsuarioBox.classList.add('respuesta-vacia');
+            }
+            
+            // Voltear tarjeta
             document.getElementById('card-front').style.display = 'none';
             document.getElementById('card-back').style.display = 'block';
             
@@ -585,6 +466,111 @@
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
+        // FUNCIÓN: Editar respuesta
+        function editarRespuesta() {
+            console.log('✏️ Editando respuesta...');
+            
+            // Volver a la vista frontal
+            document.getElementById('card-front').style.display = 'block';
+            document.getElementById('card-back').style.display = 'none';
+            
+            // Poner el foco en el input y mantener la respuesta anterior
+            const inputRespuesta = document.getElementById('respuesta-usuario');
+            inputRespuesta.value = respuestaUsuario || '';
+            inputRespuesta.focus();
+            inputRespuesta.select();
+        }
+
+        // NUEVA FUNCIÓN: Actualizar todas las tarjetas en la sesión actual del mismo hsk_id
+        function actualizarTarjetasEnSesion(hsk_id, nuevoEspanol) {
+            console.log(`🔄 Actualizando tarjetas para hsk_id ${hsk_id} con nuevo español: ${nuevoEspanol}`);
+            
+            // Actualizar todas las tarjetas en tarjetasEstudio que tengan el mismo hsk_id
+            tarjetasEstudio.forEach(tarjeta => {
+                if (tarjeta.hsk_id === hsk_id) {
+                    console.log(`📝 Actualizando tarjeta ${tarjeta.tarjeta_id}`);
+                    tarjeta.requerido = nuevoEspanol;
+                    tarjeta.espanol = nuevoEspanol;
+                }
+            });
+            
+            // También actualizar la tarjeta actual si es la misma
+            if (tarjetaActual && tarjetaActual.hsk_id === hsk_id) {
+                tarjetaActual.requerido = nuevoEspanol;
+                tarjetaActual.espanol = nuevoEspanol;
+            }
+        }
+
+        // FUNCIÓN: Añadir traducción (versión mejorada)
+        async function anadirTraduccion() {
+            console.log('➕ Añadiendo traducción...');
+            
+            // Si no hay respuesta, no hacer nada
+            if (!respuestaUsuario || respuestaUsuario.trim() === '') {
+                mostrarNotificacion('No hay respuesta para añadir', 'error');
+                return;
+            }
+            
+            // Si la tarjeta no es de tipo palabra (ej. es un ejemplo), no se puede añadir traducción
+            if (tarjetaActual.tipo !== 'palabra') {
+                mostrarNotificacion('Solo se pueden añadir traducciones a palabras individuales', 'error');
+                return;
+            }
+            
+            // Si no tiene hsk_id, no podemos añadir
+            if (!tarjetaActual.hsk_id) {
+                mostrarNotificacion('No se puede añadir traducción a esta tarjeta', 'error');
+                return;
+            }
+            
+            try {
+                console.log(`📝 Añadiendo traducción "${respuestaUsuario}" a hsk_id ${tarjetaActual.hsk_id}`);
+                
+                // Llamar a la API para añadir traducción
+                const response = await fetch(`/api/hsk/add-traduccion/${tarjetaActual.hsk_id}?traduccion=${encodeURIComponent(respuestaUsuario)}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Resultado añadir traducción:', result);
+                
+                if (result.error) {
+                    mostrarNotificacion('Error: ' + result.error, 'error');
+                } else {
+                    mostrarNotificacion('✅ Traducción añadida: ' + respuestaUsuario, 'success');
+                    
+                    // Actualizar la respuesta correcta mostrada (ahora incluye la nueva)
+                    document.getElementById('respuesta-correcta-texto').textContent = result.espanol;
+                    
+                    // Marcar la respuesta del usuario como correcta visualmente
+                    const respuestaUsuarioBox = document.querySelector('.respuesta-usuario-box');
+                    
+                    if (respuestaUsuarioBox) {
+                        respuestaUsuarioBox.classList.remove('respuesta-incorrecta', 'respuesta-vacia');
+                        respuestaUsuarioBox.classList.add('respuesta-correcta');
+                    }
+                    
+                    // Actualizar tarjeta actual en memoria con las nuevas traducciones
+                    if (tarjetaActual) {
+                        tarjetaActual.requerido = result.espanol;
+                        tarjetaActual.espanol = result.espanol; // También actualizar el campo español
+                    }
+                    
+                    // NUEVO: Forzar actualización de todas las tarjetas en el array actual
+                    // que pertenezcan al mismo hsk_id
+                    actualizarTarjetasEnSesion(tarjetaActual.hsk_id, result.espanol);
+                }
+            } catch (error) {
+                console.error('❌ Error añadiendo traducción:', error);
+                mostrarNotificacion('Error al añadir traducción: ' + error.message, 'error');
+            }
+        }
+
         async function mostrarEstadisticasDetalladas() {
             try {
                 // Cargar estadísticas generales
@@ -630,7 +616,7 @@
                 // Mostrar top 10 tarjetas por progreso
                 const top10 = progress
                     .filter(p => p.activa)
-                    .sort((a, b) => b.repeticiones - a.repeticiones)
+                    .sort((a, b) => b.repeticiones - a.repetitions)
                     .slice(0, 10);
                 
                 let nivelesHTML = '<div style="margin: 1rem 0;">';
@@ -671,26 +657,40 @@
         document.addEventListener('keydown', (e) => {
             const cardBack = document.getElementById('card-back');
             const inputRespuesta = document.getElementById('respuesta-usuario');
+            const cardFront = document.getElementById('card-front');
             
-            // Si el input está enfocado, no interceptar Enter (para poder escribir)
-            if (document.activeElement === inputRespuesta && e.key === 'Enter') {
-                e.preventDefault();
-                voltearTarjeta();
-                return;
-            }
-            
-            if (cardBack.style.display === 'none') {
-                if (e.key === ' ') {
+            // Si el input de respuesta está enfocado, manejar teclas específicamente
+            if (document.activeElement === inputRespuesta) {
+                // Enter para voltear
+                if (e.key === 'Enter') {
                     e.preventDefault();
                     voltearTarjeta();
+                    return;
                 }
-            } else {
-                if (e.key === '0') responder(0);
-                if (e.key === '1') responder(1);
-                if (e.key === '2') responder(2);
+                // Espacio para escribir espacio (no hacer nada especial)
+                if (e.key === ' ') {
+                    // Permitir que el espacio se escriba normalmente
+                    return;
+                }
             }
             
-            // ESC para cerrar modal
+            // Solo manejar atajos si NO estamos en el input
+            if (document.activeElement !== inputRespuesta) {
+                if (cardFront.style.display !== 'none') {
+                    // En el frontal: Espacio para voltear
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        voltearTarjeta();
+                    }
+                } else {
+                    // En el trasero: Números para responder
+                    if (e.key === '0') responder(0);
+                    if (e.key === '1') responder(1);
+                    if (e.key === '2') responder(2);
+                }
+            }
+            
+            // ESC para cerrar modal (siempre activo)
             if (e.key === 'Escape') {
                 cerrarEstadisticas();
             }

@@ -446,3 +446,35 @@ def get_sm2_statistics(db: Session):
         "tarjetas_pendientes_revision": cards_due,
         "total_revisiones": total_reviews
     }
+
+def get_notas_diccionario(db: Session, diccionario_id: int):
+    entrada = db.query(models.Diccionario).filter(
+        models.Diccionario.id == diccionario_id
+    ).first()
+    
+    if not entrada:
+        return {"error": "Entrada no encontrada"}
+    
+    return {
+        "diccionario_id": diccionario_id,
+        "notas": entrada.notas if hasattr(entrada, 'notas') else ""
+    }
+
+def update_notas_diccionario(db: Session, diccionario_id: int, notas: str):
+    entrada = db.query(models.Diccionario).filter(
+        models.Diccionario.id == diccionario_id
+    ).first()
+    
+    if not entrada:
+        return {"error": "Entrada no encontrada"}
+    
+    if hasattr(entrada, 'notas'):
+        entrada.notas = notas
+        db.commit()
+        return {
+            "status": "ok",
+            "message": "Notas actualizadas",
+            "notas": notas
+        }
+    else:
+        return {"error": "El campo notas no existe en la tabla"}
