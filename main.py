@@ -35,8 +35,8 @@ class ReviewRequest(BaseModel):
     frase_fallada: bool = False
     respuesta_usuario: Optional[str] = None
 
-class NotasRequest(BaseModel):
-    notas: str
+class NotaRequest(BaseModel):
+    nota: str
 
 # --- RUTAS DE NAVEGACIÓN (FRONTEND) ---
 
@@ -108,6 +108,79 @@ def api_añadir_traduccion(hsk_id: int, traduccion: str = Query(...), db: Sessio
     """Añade una traducción alternativa a una palabra HSK"""
     return service.añadir_traduccion_alternativa(db, hsk_id, traduccion)
 
+# --- RUTAS DE API NOTAS ---
+
+@app.get("/api/hsk/{hsk_id}/nota")
+def api_obtener_nota(hsk_id: int, db: Session = Depends(database.get_db)):
+    """Obtiene la nota de una palabra HSK"""
+    nota = repository.get_nota_by_hsk_id(db, hsk_id)
+    
+    if nota:
+        return {
+            "hsk_id": hsk_id,
+            "nota": nota.nota,
+            "created_at": nota.created_at.isoformat() if nota.created_at else None,
+            "updated_at": nota.updated_at.isoformat() if nota.updated_at else None
+        }
+    else:
+        return {
+            "hsk_id": hsk_id,
+            "nota": None
+        }
+
+@app.post("/api/hsk/{hsk_id}/nota")
+def api_guardar_nota(hsk_id: int, request: NotaRequest, db: Session = Depends(database.get_db)):
+    """Crea o actualiza la nota de una palabra HSK"""
+    # Verificar que la palabra HSK existe
+    palabra = repository.get_hsk_by_id(db, hsk_id)
+    if not palabra:
+        return {"error": "Palabra HSK no encontrada"}
+    
+    # Crear o actualizar nota
+    nota = repository.create_or_update_nota(db, hsk_id, request.nota)
+    
+    return {
+        "status": "ok",
+        "message": "Nota guardada",
+        "hsk_id": hsk_id,
+        "nota": nota.nota
+    }
+
+@app.delete("/api/hsk/{hsk_id}/nota")
+def api_eliminar_nota(hsk_id: int, db: Session = Depends(database.get_db)):
+    """Elimina la nota de una palabra HSK"""
+    exito = repository.delete_nota(db, hsk_id)
+    
+    if exito:
+        return {
+            "status": "ok",
+            "message": "Nota eliminada"
+        }
+    else:
+        return {
+            "error": "No se encontró nota para eliminar"
+        }
+
+@app.get("/api/notas")
+def api_listar_notas(db: Session = Depends(database.get_db)):
+    """Lista todas las notas con información de HSK"""
+    notas_data = repository.get_all_notas(db)
+    
+    resultado = []
+    for nota, hsk in notas_data:
+        resultado.append({
+            "id": nota.id,
+            "hsk_id": hsk.id,
+            "hanzi": hsk.hanzi,
+            "pinyin": hsk.pinyin,
+            "espanol": hsk.espanol,
+            "nota": nota.nota,
+            "created_at": nota.created_at.isoformat() if nota.created_at else None,
+            "updated_at": nota.updated_at.isoformat() if nota.updated_at else None
+        })
+    
+    return resultado
+
 # --- RUTAS DE API DICCIONARIO ---
 
 @app.post("/api/diccionario/add/{hsk_id}")
@@ -136,16 +209,6 @@ def api_ver_diccionario(db: Session = Depends(database.get_db)):
 @app.get("/api/diccionario/search")
 def api_buscar_diccionario(query: str = Query(""), db: Session = Depends(database.get_db)):
     return service.buscar_en_diccionario(db, query)
-
-@app.get("/api/diccionario/{diccionario_id}/notas")
-def api_obtener_notas(diccionario_id: int, db: Session = Depends(database.get_db)):
-    """Obtiene las notas de una entrada del diccionario"""
-    return repository.get_notas_diccionario(db, diccionario_id)
-
-@app.post("/api/diccionario/{diccionario_id}/notas")
-def api_actualizar_notas(diccionario_id: int, request: NotasRequest, db: Session = Depends(database.get_db)):
-    """Actualiza las notas de una entrada del diccionario"""
-    return repository.update_notas_diccionario(db, diccionario_id, request.notas)
 
 # --- RUTAS DE API EJEMPLOS ---
 

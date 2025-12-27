@@ -13,21 +13,33 @@ class HSK(Base):
     espanol = Column(String)
     hanzi_alt = Column(String, nullable=True)
     pinyin_alt = Column(String, nullable=True)
-    espanol_alt = Column(String, nullable=True)
+    categoria = Column(String, nullable=True)  # NUEVO
+    ejemplo = Column(Text, nullable=True)  # NUEVO
+    significado_ejemplo = Column(Text, nullable=True)  # NUEVO
+
+class Notas(Base):
+    """
+    Tabla para almacenar notas personalizadas sobre palabras HSK
+    """
+    __tablename__ = "notas"
+    id = Column(Integer, primary_key=True, index=True)
+    hsk_id = Column(Integer, ForeignKey("hsk.id"))
+    nota = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Diccionario(Base):
     __tablename__ = "diccionario"
     id = Column(Integer, primary_key=True, index=True)
     hsk_id = Column(Integer, ForeignKey("hsk.id"))
     activo = Column(Boolean, default=True)  # Se desactiva cuando una frase lo contiene y está dominada
-    notas = Column(Text, nullable=True)
 
 class Tarjeta(Base):
     __tablename__ = "tarjetas"
     id = Column(Integer, primary_key=True, index=True)
     hsk_id = Column(Integer, ForeignKey("hsk.id"), nullable=True)
     diccionario_id = Column(Integer, ForeignKey("diccionario.id"), nullable=True)
-    ejemplo_id = Column(Integer, ForeignKey("ejemplos.id"), nullable=True)  # Nueva relación
+    ejemplo_id = Column(Integer, ForeignKey("ejemplos.id"), nullable=True)
     mostrado1 = Column(String, nullable=True)
     mostrado2 = Column(String, nullable=True)
     audio = Column(Boolean, default=False)

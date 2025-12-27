@@ -27,6 +27,51 @@ def search_hsk(db: Session, query: str):
     ).all()
 
 # ============================================================================
+# FUNCIONES NOTAS
+# ============================================================================
+
+def get_nota_by_hsk_id(db: Session, hsk_id: int):
+    """Obtiene la nota asociada a una palabra HSK"""
+    return db.query(models.Notas).filter(models.Notas.hsk_id == hsk_id).first()
+
+def create_or_update_nota(db: Session, hsk_id: int, nota_texto: str):
+    """Crea o actualiza una nota para una palabra HSK"""
+    nota_existente = get_nota_by_hsk_id(db, hsk_id)
+    
+    if nota_existente:
+        # Actualizar
+        nota_existente.nota = nota_texto
+        nota_existente.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(nota_existente)
+        return nota_existente
+    else:
+        # Crear
+        nueva_nota = models.Notas(
+            hsk_id=hsk_id,
+            nota=nota_texto
+        )
+        db.add(nueva_nota)
+        db.commit()
+        db.refresh(nueva_nota)
+        return nueva_nota
+
+def delete_nota(db: Session, hsk_id: int):
+    """Elimina la nota de una palabra HSK"""
+    nota = get_nota_by_hsk_id(db, hsk_id)
+    if nota:
+        db.delete(nota)
+        db.commit()
+        return True
+    return False
+
+def get_all_notas(db: Session):
+    """Obtiene todas las notas con información de HSK"""
+    return db.query(models.Notas, models.HSK).join(
+        models.HSK, models.Notas.hsk_id == models.HSK.id
+    ).all()
+
+# ============================================================================
 # FUNCIONES DICCIONARIO
 # ============================================================================
 
@@ -396,12 +441,12 @@ def create_review(db: Session, tarjeta_id: int, session_id: int, quality: int,
                   prev_interval: int, new_interval: int,
                   prev_estado: str, new_estado: str,
                   hanzi_fallados: list = None, frase_fallada: bool = False,
-                  respuesta_usuario: str = None):  # NUEVO PARÁMETRO
+                  respuesta_usuario: str = None):
     review = models.SM2Review(
         tarjeta_id=tarjeta_id,
         session_id=session_id,
         quality=quality,
-        respuesta_usuario=respuesta_usuario,  # NUEVO
+        respuesta_usuario=respuesta_usuario,
         previous_easiness=prev_easiness,
         new_easiness=new_easiness,
         previous_interval=prev_interval,
@@ -446,35 +491,3 @@ def get_sm2_statistics(db: Session):
         "tarjetas_pendientes_revision": cards_due,
         "total_revisiones": total_reviews
     }
-
-def get_notas_diccionario(db: Session, diccionario_id: int):
-    entrada = db.query(models.Diccionario).filter(
-        models.Diccionario.id == diccionario_id
-    ).first()
-    
-    if not entrada:
-        return {"error": "Entrada no encontrada"}
-    
-    return {
-        "diccionario_id": diccionario_id,
-        "notas": entrada.notas if hasattr(entrada, 'notas') else ""
-    }
-
-def update_notas_diccionario(db: Session, diccionario_id: int, notas: str):
-    entrada = db.query(models.Diccionario).filter(
-        models.Diccionario.id == diccionario_id
-    ).first()
-    
-    if not entrada:
-        return {"error": "Entrada no encontrada"}
-    
-    if hasattr(entrada, 'notas'):
-        entrada.notas = notas
-        db.commit()
-        return {
-            "status": "ok",
-            "message": "Notas actualizadas",
-            "notas": notas
-        }
-    else:
-        return {"error": "El campo notas no existe en la tabla"}

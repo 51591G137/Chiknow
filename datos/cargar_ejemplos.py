@@ -1,293 +1,303 @@
-#!/usr/bin/env python3
 """
-Script para cargar ejemplos/frases desde CSV
-Uso: python3 cargar_ejemplos.py
+Script para cargar o actualizar ejemplos desde ejemplos.csv
 
-Formato esperado del CSV (sin cabecera):
-id,hanzi,pinyin,espanol
+Este script:
+1. Lee el archivo ejemplos.csv
+2. Para cada fila, verifica si el ID ya existe en la BD
+3. Si existe, actualiza los datos (UPSERT)
+4. Si no existe, crea un nuevo registro
+5. Gestiona las relaciones con los hanzi componentes
 
-Ejemplo:
-1,我喝茶,wǒ hē chá,Yo bebo té
-2,你好,nǐ hǎo,Hola
-3,我爱你,wǒ ài nǐ,Te amo
-
-El script analiza automáticamente cada hanzi de la frase y busca su ID en la tabla HSK
+Estructura esperada del CSV:
+- ID (opcional, se generará si no existe)
+- Hanzi: frase completa en caracteres chinos
+- Pinyin: romanización completa
+- Español: traducción al español
+- Nivel: nivel HSK (1-6)
+- Complejidad: 1=simple, 2=medio, 3=complejo
+- Hanzi_IDs: IDs de los hanzi que componen la frase, separados por comas (ej: "1,2,3")
 """
 
-import csv
-from database import SessionLocal, engine
+import sys
+import os
+import pandas as pd
+from sqlalchemy.orm import Session
+import unicodedata
+import re
+
+# Añadir el directorio raíz al path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from database import SessionLocal, engine, Base
 import models
-import service
 
-# Crear todas las tablas
-models.Base.metadata.create_all(bind=engine)
-
-def analizar_hanzi_en_frase(db, frase):
+def normalizar_nombre_columna(nombre):
     """
-    Analiza una frase y devuelve los IDs HSK de cada hanzi encontrado
+    Normaliza nombres de columnas para hacerlos comparables
+    Elimina TODOS los acentos y marcas diacríticas, convierte a minúsculas
+    """
+    # Normalizar a NFD (descomponer caracteres con acentos)
+    nombre_nfd = unicodedata.normalize('NFD', nombre)
+    
+    # Filtrar solo caracteres ASCII (elimina todos los acentos y marcas)
+    nombre_ascii = ''.join(
+        c for c in nombre_nfd 
+        if unicodedata.category(c) != 'Mn'  # Mn = Nonspacing_Mark (acentos, tildes, etc.)
+    )
+    
+    # Convertir a minúsculas y eliminar espacios extra
+    nombre_limpio = nombre_ascii.lower().strip()
+    
+    # Eliminar guiones bajos y espacios para comparación
+    nombre_comparable = re.sub(r'[_\s]+', '', nombre_limpio)
+    
+    return nombre_comparable
+
+def mapear_columnas(columnas_csv):
+    """
+    Crea un mapeo entre nombres de columnas del CSV y nombres estándar
     
     Args:
-        db: Sesión de base de datos
-        frase: String con hanzi (ej: "我喝茶")
+        columnas_csv: Lista de nombres de columnas del CSV
     
     Returns:
-        tuple: (hanzi_ids, hanzi_no_encontrados)
+        dict: Mapeo de nombre_estandar -> nombre_en_csv
     """
-    hanzi_ids = []
-    hanzi_no_encontrados = []
-    
-    for posicion, caracter in enumerate(frase, start=1):
-        # Ignorar espacios, puntuación y caracteres ASCII
-        if caracter.isspace() or not '\u4e00' <= caracter <= '\u9fff':
-            continue
+    # Definir variaciones posibles para cada columna
+    variaciones = {
+        'id': 'id',
         
-        # Buscar el hanzi en la tabla HSK
-        hsk = db.query(models.HSK).filter(models.HSK.hanzi == caracter).first()
+        'hanzi': 'hanzi',
+        'hanzi': 'hanzi',
+        'frase': 'hanzi',
+        'caracteres': 'hanzi',
         
-        if hsk:
-            hanzi_ids.append(hsk.id)
-        else:
-            hanzi_no_encontrados.append(caracter)
+        'pinyin': 'pinyin',
+        'pinyin': 'pinyin',
+        'romanizacion': 'pinyin',
+        
+        'español': 'espanol',
+        'espanol': 'espanol',
+        'spanish': 'espanol',
+        'traduccion': 'espanol',
+        
+        'nivel': 'nivel',
+        'level': 'nivel',
+        'hsk': 'nivel',
+        
+        'complejidad': 'complejidad',
+        'complexity': 'complejidad',
+        'dificultad': 'complejidad',
+        
+        'hanziids': 'hanzi_ids',
+        'hanzi_ids': 'hanzi_ids',
+        'hanzis': 'hanzi_ids',
+        'ids': 'hanzi_ids',
+        'componentes': 'hanzi_ids',
+    }
     
-    return hanzi_ids, hanzi_no_encontrados
+    mapeo = {}
+    mapeo_debug = {}
+    
+    # Para cada columna del CSV
+    for col_csv in columnas_csv:
+        col_normalizada = normalizar_nombre_columna(col_csv)
+        mapeo_debug[col_csv] = col_normalizada
+        
+        # Buscar en las variaciones
+        if col_normalizada in variaciones:
+            nombre_estandar = variaciones[col_normalizada]
+            mapeo[nombre_estandar] = col_csv
+    
+    # Debug
+    print(f"\n🔍 Debug - Columnas normalizadas:")
+    for original, normalizada in mapeo_debug.items():
+        encontrada = "✅" if normalizada in variaciones else "❌"
+        print(f"   {encontrada} '{original}' → '{normalizada}'")
+    
+    return mapeo
 
-def calcular_complejidad(num_hanzi):
-    """Calcula complejidad basada en número de hanzi"""
-    if num_hanzi <= 2:
-        return 1  # Simple
-    elif num_hanzi <= 4:
-        return 2  # Medio
-    else:
-        return 3  # Complejo
-
-def cargar_ejemplos_desde_csv(archivo_csv='ejemplos.csv'):
-    """Carga ejemplos desde un archivo CSV sin cabecera"""
+def cargar_ejemplos_desde_csv(csv_path: str = "datos/ejemplos.csv"):
+    """
+    Carga o actualiza ejemplos desde CSV
+    
+    Args:
+        csv_path: Ruta al archivo CSV
+    """
+    # Crear tablas si no existen
+    Base.metadata.create_all(bind=engine)
+    
+    # Leer CSV
+    print(f"📖 Leyendo {csv_path}...")
+    try:
+        df = pd.read_csv(csv_path)
+    except FileNotFoundError:
+        print(f"❌ Error: No se encontró el archivo {csv_path}")
+        return
+    
+    print(f"✅ Leídas {len(df)} filas del CSV")
+    
+    # Crear mapeo de columnas
+    print(f"\n🔍 Analizando columnas del CSV...")
+    print(f"Columnas encontradas: {list(df.columns)}")
+    
+    mapeo = mapear_columnas(df.columns)
+    
+    print(f"\n📋 Mapeo de columnas exitoso:")
+    for estandar, csv_col in mapeo.items():
+        print(f"   {estandar:20} ← '{csv_col}'")
+    
+    # Validar columnas requeridas
+    columnas_requeridas = ['hanzi', 'pinyin', 'espanol']
+    columnas_faltantes = [col for col in columnas_requeridas if col not in mapeo]
+    
+    if columnas_faltantes:
+        print(f"\n❌ Error: No se pudieron mapear las columnas requeridas: {columnas_faltantes}")
+        print(f"\nColumnas disponibles en el mapeo: {list(mapeo.keys())}")
+        print(f"\nPor favor verifica que el CSV contenga columnas equivalentes a:")
+        print(f"   - Hanzi (o Hànzì, frase, caracteres)")
+        print(f"   - Pinyin (o Pīnyīn, romanizacion)")
+        print(f"   - Español (o espanol, spanish, traduccion)")
+        return
+    
+    print(f"\n✅ Todas las columnas requeridas están presentes\n")
+    
     db = SessionLocal()
     
     try:
-        # Verificar si ya hay datos
-        count = db.query(models.Ejemplo).count()
-        if count > 0:
-            print(f"⚠️  Ya hay {count} ejemplos en la base de datos.")
-            respuesta = input("¿Quieres eliminarlos y recargar? (s/n): ")
-            if respuesta.lower() != 's':
-                print("❌ Cancelado")
-                return
+        registros_nuevos = 0
+        registros_actualizados = 0
+        relaciones_creadas = 0
+        
+        for idx, row in df.iterrows():
+            # Determinar ID
+            if 'id' in mapeo and pd.notna(row[mapeo['id']]):
+                ejemplo_id = int(row[mapeo['id']])
+            else:
+                ejemplo_id = idx + 1
             
-            # Eliminar datos existentes (y sus relaciones)
-            print("  Eliminando tarjetas de ejemplos...")
-            db.query(models.Tarjeta).filter(models.Tarjeta.ejemplo_id != None).delete()
-            print("  Eliminando relaciones HSK-Ejemplo...")
-            db.query(models.HSKEjemplo).delete()
-            print("  Eliminando jerarquías de ejemplos...")
-            db.query(models.EjemploJerarquia).delete()
-            print("  Eliminando activaciones...")
-            db.query(models.EjemploActivacion).delete()
-            print("  Eliminando ejemplos...")
-            db.query(models.Ejemplo).delete()
-            db.commit()
-            print("✅ Datos antiguos eliminados")
-        
-        # Verificar que existan palabras HSK
-        hsk_count = db.query(models.HSK).count()
-        if hsk_count == 0:
-            print("❌ ERROR: No hay palabras HSK en la base de datos")
-            print("   Ejecuta primero: python3 cargar_hsk_sin_cabecera.py")
-            return
-        
-        print(f"ℹ️  Base de datos tiene {hsk_count} palabras HSK\n")
-        
-        # Leer CSV SIN CABECERA
-        ejemplos_data = []
-        with open(archivo_csv, 'r', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if len(row) >= 4:  # id, hanzi, pinyin, espanol
-                    ejemplos_data.append(row)
-        
-        print(f"📖 Leyendo {len(ejemplos_data)} ejemplos desde {archivo_csv}...")
-        print("🔍 Analizando hanzi de cada frase...\n")
-        
-        # Insertar ejemplos
-        errores = 0
-        ejemplos_creados = 0
-        hanzi_total_no_encontrados = set()
-        
-        for i, row in enumerate(ejemplos_data, 1):
-            try:
-                ejemplo_id = int(row[0])
-                hanzi = row[1].strip()
-                pinyin = row[2].strip()
-                espanol = row[3].strip()
+            # Buscar si existe
+            existing = db.query(models.Ejemplo).filter(models.Ejemplo.id == ejemplo_id).first()
+            
+            # Preparar datos básicos usando mapeo
+            datos = {
+                'id': ejemplo_id,
+                'hanzi': str(row[mapeo['hanzi']]).strip() if pd.notna(row[mapeo['hanzi']]) else '',
+                'pinyin': str(row[mapeo['pinyin']]).strip() if pd.notna(row[mapeo['pinyin']]) else '',
+                'espanol': str(row[mapeo['espanol']]).strip() if pd.notna(row[mapeo['espanol']]) else '',
+            }
+            
+            # Añadir campos opcionales
+            if 'nivel' in mapeo:
+                datos['nivel'] = int(row[mapeo['nivel']]) if pd.notna(row[mapeo['nivel']]) else 1
+            else:
+                datos['nivel'] = 1
+            
+            if 'complejidad' in mapeo:
+                datos['complejidad'] = int(row[mapeo['complejidad']]) if pd.notna(row[mapeo['complejidad']]) else 1
+            else:
+                datos['complejidad'] = 1
+            
+            # Mantener estado de activación si ya existe
+            if existing:
+                datos['activado'] = existing.activado
+                datos['en_diccionario'] = existing.en_diccionario
+            else:
+                datos['activado'] = False
+                datos['en_diccionario'] = False
+            
+            if existing:
+                # ACTUALIZAR
+                for key, value in datos.items():
+                    if key != 'id':
+                        setattr(existing, key, value)
+                ejemplo_obj = existing
+                registros_actualizados += 1
+            else:
+                # CREAR
+                ejemplo_obj = models.Ejemplo(**datos)
+                db.add(ejemplo_obj)
+                db.flush()  # Para obtener el ID
+                registros_nuevos += 1
+            
+            # GESTIONAR RELACIONES CON HANZI
+            if 'hanzi_ids' in mapeo and pd.notna(row[mapeo['hanzi_ids']]):
+                # Eliminar relaciones existentes
+                db.query(models.HSKEjemplo).filter(
+                    models.HSKEjemplo.ejemplo_id == ejemplo_obj.id
+                ).delete()
                 
-                # Analizar hanzi en la frase
-                hanzi_ids, hanzi_no_encontrados = analizar_hanzi_en_frase(db, hanzi)
-                
-                if hanzi_no_encontrados:
-                    print(f"  ⚠️  Línea {i} ({hanzi}): Hanzi no encontrados en HSK: {', '.join(hanzi_no_encontrados)}")
-                    hanzi_total_no_encontrados.update(hanzi_no_encontrados)
-                
-                if not hanzi_ids:
-                    print(f"  ❌ Línea {i} ({hanzi}): No se encontró ningún hanzi válido, saltando...")
-                    errores += 1
-                    continue
-                
-                # Calcular complejidad y nivel
-                complejidad = calcular_complejidad(len(hanzi_ids))
-                nivel = 1  # Por defecto HSK1, podrías calcularlo según los niveles de los hanzi
-                
-                # Crear ejemplo usando el servicio
-                ejemplo = service.crear_ejemplo_completo(
-                    db, hanzi, pinyin, espanol, hanzi_ids, nivel, complejidad
-                )
-                
-                ejemplos_creados += 1
-                
-                # Mostrar progreso cada 10
-                if i % 10 == 0:
-                    print(f"  ✓ Procesados {i}/{len(ejemplos_data)}... ({ejemplos_creados} creados)")
+                # Crear nuevas relaciones
+                hanzi_ids_str = str(row[mapeo['hanzi_ids']]).strip()
+                if hanzi_ids_str:
+                    hanzi_ids = [int(x.strip()) for x in hanzi_ids_str.split(',') if x.strip()]
                     
-            except (ValueError, IndexError) as e:
-                errores += 1
-                print(f"  ⚠️  Error en línea {i}: {e}")
-                if errores > 20:
-                    print(f"  ❌ Demasiados errores, abortando...")
-                    raise
-            except Exception as e:
-                errores += 1
-                print(f"  ⚠️  Error inesperado en línea {i}: {e}")
-                import traceback
-                traceback.print_exc()
+                    for posicion, hsk_id in enumerate(hanzi_ids, start=1):
+                        # Verificar que el hanzi existe
+                        hanzi_existe = db.query(models.HSK).filter(models.HSK.id == hsk_id).first()
+                        if hanzi_existe:
+                            relacion = models.HSKEjemplo(
+                                hsk_id=hsk_id,
+                                ejemplo_id=ejemplo_obj.id,
+                                posicion=posicion
+                            )
+                            db.add(relacion)
+                            relaciones_creadas += 1
+                        else:
+                            print(f"⚠️  Advertencia: HSK ID {hsk_id} no existe (ejemplo {ejemplo_obj.id})")
+            
+            # Commit periódico
+            if (idx + 1) % 50 == 0:
+                db.commit()
+                print(f"   Procesados: {idx + 1}/{len(df)}")
         
+        # Commit final
         db.commit()
         
-        # Verificar
-        total = db.query(models.Ejemplo).count()
-        print(f"\n{'='*60}")
-        print(f"✅ ¡Éxito! Se cargaron {total} ejemplos")
-        if errores > 0:
-            print(f"⚠️  Hubo {errores} errores al procesar algunas líneas")
-        
-        if hanzi_total_no_encontrados:
-            print(f"\n⚠️  Hanzi no encontrados en la tabla HSK:")
-            print(f"   {', '.join(sorted(hanzi_total_no_encontrados))}")
-            print(f"   Estos hanzi fueron ignorados en los ejemplos")
-        
-        # Mostrar estadísticas
-        activados = db.query(models.Ejemplo).filter(models.Ejemplo.activado == True).count()
-        en_diccionario = db.query(models.Ejemplo).filter(models.Ejemplo.en_diccionario == True).count()
-        
-        print(f"\n📊 Estadísticas:")
-        print(f"  Total ejemplos cargados: {total}")
-        print(f"  Activados (todos hanzi dominados): {activados}")
-        print(f"  En diccionario del usuario: {en_diccionario}")
-        print(f"  Por activar (requieren estudio): {total - activados}")
-        
-        # Distribución por complejidad
-        simple = db.query(models.Ejemplo).filter(models.Ejemplo.complejidad == 1).count()
-        medio = db.query(models.Ejemplo).filter(models.Ejemplo.complejidad == 2).count()
-        complejo = db.query(models.Ejemplo).filter(models.Ejemplo.complejidad == 3).count()
-        
-        print(f"\n📈 Distribución por complejidad:")
-        print(f"  Simple (1-2 hanzi):   {simple}")
-        print(f"  Medio (3-4 hanzi):    {medio}")
-        print(f"  Complejo (5+ hanzi):  {complejo}")
-        
-        # Mostrar algunos ejemplos
-        print(f"\n📝 Primeros 10 ejemplos cargados:")
-        ejemplos = db.query(models.Ejemplo).limit(10).all()
-        for ejemplo in ejemplos:
-            estado = "✓ Activado" if ejemplo.activado else "○ No activado"
-            complejidad_str = ["Simple", "Medio", "Complejo"][ejemplo.complejidad - 1]
-            
-            print(f"\n  {ejemplo.id}. {ejemplo.hanzi} ({ejemplo.pinyin})")
-            print(f"      {ejemplo.espanol}")
-            print(f"      {estado} | HSK{ejemplo.nivel} | {complejidad_str}")
-            
-            # Mostrar hanzi componentes
-            relaciones = db.query(models.HSKEjemplo, models.HSK).join(
-                models.HSK, models.HSKEjemplo.hsk_id == models.HSK.id
-            ).filter(
-                models.HSKEjemplo.ejemplo_id == ejemplo.id
-            ).order_by(models.HSKEjemplo.posicion).all()
-            
-            hanzi_componentes = [f"{hsk.hanzi}({hsk.pinyin})" for rel, hsk in relaciones]
-            print(f"      Componentes: {' + '.join(hanzi_componentes)}")
-        
-        print(f"\n{'='*60}")
-        print("\n💡 Próximos pasos:")
-        print("  1. Añade palabras HSK a tu diccionario desde http://localhost:8000")
-        print("  2. Estudia las palabras en /sm2 hasta dominarlas")
-        print("  3. Los ejemplos se activarán automáticamente cuando domines todos sus hanzi")
-        print("  4. Ve a /ejemplos para ver ejemplos disponibles")
-        print("  5. Añade ejemplos activados a tu estudio")
-        print("  6. Estudia los ejemplos en /sm2")
-        
-    except FileNotFoundError:
-        print(f"❌ ERROR: No se encontró el archivo '{archivo_csv}'")
-        print("\nAsegúrate de que el archivo existe en el directorio actual")
-        print("\nFormato esperado (SIN cabecera):")
-        print("  id,hanzi,pinyin,espanol")
-        print("\nEjemplo:")
-        print("  1,我喝茶,wǒ hē chá,Yo bebo té")
-        print("  2,你好,nǐ hǎo,Hola")
-        print("  3,我爱你,wǒ ài nǐ,Te amo")
-        print("\nEl script analiza automáticamente cada hanzi y busca su ID en HSK")
+        print("\n" + "="*50)
+        print("✅ IMPORTACIÓN DE EJEMPLOS COMPLETADA")
+        print(f"📊 Ejemplos nuevos: {registros_nuevos}")
+        print(f"🔄 Ejemplos actualizados: {registros_actualizados}")
+        print(f"🔗 Relaciones HSK-Ejemplo creadas: {relaciones_creadas}")
+        print(f"📈 Total ejemplos en BD: {db.query(models.Ejemplo).count()}")
+        print("="*50)
         
     except Exception as e:
-        print(f"❌ ERROR: {e}")
         db.rollback()
+        print(f"\n❌ Error durante la importación: {e}")
         import traceback
         traceback.print_exc()
-        
+        raise
     finally:
         db.close()
 
-def mostrar_ayuda():
-    """Muestra ayuda sobre el script"""
-    print("\n" + "="*60)
-    print("AYUDA: Cómo usar cargar_ejemplos.py")
-    print("="*60)
-    print("\nFormato del CSV (sin cabecera):")
-    print("  id,hanzi,pinyin,espanol")
-    print("\nColumnas:")
-    print("  1. id      : Número de ejemplo")
-    print("  2. hanzi   : Frase en caracteres chinos")
-    print("  3. pinyin  : Pronunciación con tonos")
-    print("  4. espanol : Traducción al español")
-    print("\nEjemplo de archivo ejemplos.csv:")
-    print("  1,我喝茶,wǒ hē chá,Yo bebo té")
-    print("  2,你好,nǐ hǎo,Hola")
-    print("  3,我爱你,wǒ ài nǐ,Te amo")
-    print("  4,这是什么,zhè shì shénme,¿Qué es esto?")
-    print("\nCómo funciona:")
-    print("  1. El script lee cada frase del CSV")
-    print("  2. Analiza cada hanzi de la frase")
-    print("  3. Busca cada hanzi en la tabla HSK")
-    print("  4. Crea las relaciones automáticamente")
-    print("  5. Calcula la complejidad según el número de hanzi")
-    print("\nComplejidad automática:")
-    print("  - Simple:   1-2 hanzi")
-    print("  - Medio:    3-4 hanzi")
-    print("  - Complejo: 5+ hanzi")
-    print("\nActivación automática:")
-    print("  - Los ejemplos se activan cuando dominas TODOS sus hanzi")
-    print("  - Dominar = haber estudiado la palabra y tener buen progreso")
-    print("  - Puedes ver ejemplos disponibles en /ejemplos")
-    print("\nRequisitos:")
-    print("  - Debes haber cargado primero las palabras HSK")
-    print("  - Ejecuta: python3 cargar_hsk_sin_cabecera.py")
-    print("\nUso:")
-    print("  python3 cargar_ejemplos.py           # Cargar ejemplos")
-    print("  python3 cargar_ejemplos.py --ayuda   # Mostrar esta ayuda")
+def main():
+    """Función principal"""
+    print("\n" + "="*50)
+    print("🚀 CARGADOR DE EJEMPLOS")
+    print("="*50 + "\n")
+    
+    # Buscar el archivo en múltiples ubicaciones
+    posibles_rutas = [
+        "datos/ejemplos.csv",
+        "../datos/ejemplos.csv",
+        "ejemplos.csv"
+    ]
+    
+    csv_path = None
+    for ruta in posibles_rutas:
+        if os.path.exists(ruta):
+            csv_path = ruta
+            break
+    
+    if csv_path is None:
+        print("❌ No se encontró ejemplos.csv en ninguna ubicación esperada")
+        print("Ubicaciones buscadas:")
+        for ruta in posibles_rutas:
+            print(f"  - {os.path.abspath(ruta)}")
+        return
+    
+    cargar_ejemplos_desde_csv(csv_path)
 
 if __name__ == "__main__":
-    print("="*60)
-    print("CARGADOR DE EJEMPLOS/FRASES")
-    print("="*60)
-    
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] in ['--ayuda', '-h', '--help']:
-        mostrar_ayuda()
-    else:
-        cargar_ejemplos_desde_csv()
+    main()
