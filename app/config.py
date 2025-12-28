@@ -14,22 +14,24 @@ class Config:
     # Entorno actual: 'local' o 'produccion'
     DB_ENVIRONMENT = os.getenv("DB_ENVIRONMENT", "local")
     
-    # URLs de base de datos
-    DATABASE_URL_LOCAL = os.getenv("DATABASE_URL_LOCAL", "sqlite:///./data/test.db")
+    # URLs de base de datos - usar DATABASE_URL como variable principal
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
+    DATABASE_URL_LOCAL = os.getenv("DATABASE_URL_LOCAL", "sqlite:///./test.db")
     DATABASE_URL_PRODUCTION = os.getenv("DATABASE_URL_PRODUCTION", "")
     
     @classmethod
     def get_database_url(cls):
         """Obtiene la URL de base de datos según el entorno"""
         if cls.DB_ENVIRONMENT == "produccion":
-            url = cls.DATABASE_URL_PRODUCTION
+            # Prioridad: DATABASE_URL (para Render) -> DATABASE_URL_PRODUCTION
+            url = cls.DATABASE_URL or cls.DATABASE_URL_PRODUCTION
             if not url:
-                raise ValueError("DATABASE_URL_PRODUCTION no configurada en .env")
+                raise ValueError("URL de base de datos de producción no configurada")
         else:
             url = cls.DATABASE_URL_LOCAL
         
         # Fix para Render: postgres:// → postgresql://
-        if url.startswith("postgres://"):
+        if url and url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
         
         return url

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request, Query
+from fastapi import FastAPI, Depends, Request, Query, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -8,12 +8,21 @@ import os
 
 # Importamos nuestros módulos locales
 from . import models, service, repository, database
+from .config import config
 
 # --- CAPA DE ARRANQUE ---
-# Crear tablas si no existen
-print("🔧 Inicializando base de datos...")
-database.Base.metadata.create_all(bind=database.engine)
-print("✅ Base de datos inicializada")
+print("🔧 Inicializando aplicación Chiknow...")
+print(f"📊 Entorno: {config.DB_ENVIRONMENT}")
+print(f"📁 URL BD: {config.get_database_url()}")
+
+# Intentar crear tablas con manejo de errores
+try:
+    print("🔄 Creando tablas si no existen...")
+    database.Base.metadata.create_all(bind=database.engine)
+    print("✅ Base de datos inicializada")
+except Exception as e:
+    print(f"⚠️  Advertencia al inicializar BD: {e}")
+    print("ℹ️  Continuando sin tablas (puede que ya existan)")
 
 # CREAR APP
 app = FastAPI(title="Chiknow", version="1.0.0")
@@ -60,6 +69,26 @@ def ejemplos_page(request: Request):
 @app.get("/sm2")
 def sm2_page(request: Request):
     return templates.TemplateResponse("sm2.html", {"request": request})
+
+@app.get("/health")
+def health_check():
+    """Endpoint de salud para verificar que la app está funcionando"""
+    try:
+        # Intentar conectar a la base de datos
+        with database.engine.connect() as conn:
+            conn.execute("SELECT 1")
+        return {
+            "status": "healthy",
+            "environment": config.DB_ENVIRONMENT,
+            "database": "connected"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "environment": config.DB_ENVIRONMENT,
+            "database": "disconnected",
+            "error": str(e)
+        }
 
 # --- RUTAS DE API HSK ---
 
