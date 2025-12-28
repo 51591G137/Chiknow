@@ -2,7 +2,7 @@ services:
   - type: web
     name: chiknow-app
     env: python
-    runtime: python-3.12.0
+    runtime: python-3.13.4
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     autoDeploy: true
