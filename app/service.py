@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-import repository
+from . import repository
+from . import models
 import json
-import models
 
 # ============================================================================
 # FUNCIONES DICCIONARIO
@@ -132,8 +132,8 @@ def actualizar_tarjetas_por_hsk_id(db: Session, hsk_id: int, nuevo_requerido: st
     manteniendo el progreso SM2 y los IDs originales
     """
     # Buscar todas las tarjetas asociadas a este hsk_id
-    tarjetas = db.query(repository.models.Tarjeta).filter(
-        repository.models.Tarjeta.hsk_id == hsk_id
+    tarjetas = db.query(models.Tarjeta).filter(
+        models.Tarjeta.hsk_id == hsk_id
     ).all()
     
     for tarjeta in tarjetas:
@@ -179,8 +179,8 @@ def verificar_y_activar_ejemplos(db: Session):
     """
     Verifica todos los ejemplos y activa aquellos cuyos hanzi están dominados
     """
-    ejemplos = db.query(repository.models.Ejemplo).filter(
-        repository.models.Ejemplo.activado == False
+    ejemplos = db.query(models.Ejemplo).filter(
+        models.Ejemplo.activado == False
     ).all()
     
     for ejemplo in ejemplos:
@@ -280,8 +280,8 @@ def gestionar_desactivacion_por_ejemplo(db: Session, ejemplo_id: int):
     ejemplos_simples = repository.get_ejemplos_simples_contenidos(db, ejemplo_id)
     for jerarquia, ejemplo_simple in ejemplos_simples:
         # Desactivar tarjetas del ejemplo simple
-        tarjetas_simple = db.query(repository.models.Tarjeta).filter(
-            repository.models.Tarjeta.ejemplo_id == ejemplo_simple.id
+        tarjetas_simple = db.query(models.Tarjeta).filter(
+            models.Tarjeta.ejemplo_id == ejemplo_simple.id
         ).all()
         for tarjeta in tarjetas_simple:
             repository.desactivar_tarjeta(db, tarjeta.id)
@@ -290,8 +290,8 @@ def esta_ejemplo_dominado(db: Session, ejemplo_id: int):
     """
     Verifica si un ejemplo está dominado (todas sus tarjetas en estado dominada/madura)
     """
-    tarjetas = db.query(repository.models.Tarjeta).filter(
-        repository.models.Tarjeta.ejemplo_id == ejemplo_id
+    tarjetas = db.query(models.Tarjeta).filter(
+        models.Tarjeta.ejemplo_id == ejemplo_id
     ).all()
     
     if not tarjetas:
@@ -368,8 +368,8 @@ def obtener_ejemplos_en_estudio(db: Session):
     resultado = []
     for ejemplo in ejemplos:
         # Obtener progreso
-        tarjetas = db.query(repository.models.Tarjeta).filter(
-            repository.models.Tarjeta.ejemplo_id == ejemplo.id
+        tarjetas = db.query(models.Tarjeta).filter(
+            models.Tarjeta.ejemplo_id == ejemplo.id
         ).all()
         
         dominado = esta_ejemplo_dominado(db, ejemplo.id) if tarjetas else False
@@ -624,8 +624,8 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
         return {"error": "Quality debe estar entre 0 y 2"}
     
     # Obtener tarjeta y progreso
-    tarjeta = db.query(repository.models.Tarjeta).filter(
-        repository.models.Tarjeta.id == tarjeta_id
+    tarjeta = db.query(models.Tarjeta).filter(
+        models.Tarjeta.id == tarjeta_id
     ).first()
     
     if not tarjeta:

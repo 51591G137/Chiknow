@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from datetime import datetime, timedelta
-import models
+from . import models  # <- IMPORTACIÓN RELATIVA
 import json
 import random
 
