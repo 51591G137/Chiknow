@@ -13,10 +13,15 @@ import repository
 import database
 
 # --- CAPA DE ARRANQUE ---
+# Crear tablas si no existen
+print("🔧 Inicializando base de datos...")
 database.Base.metadata.create_all(bind=database.engine)
+print("✅ Base de datos inicializada")
 
-# CREAR APP PRIMERO
-app = FastAPI()
+# CREAR APP
+app = FastAPI(title="Chiknow", version="1.0.0")
+
+# ... resto del código
 
 base_path = os.path.dirname(os.path.realpath(__file__))
 static_path = os.path.join(base_path, "static")

@@ -3,3 +3,5 @@ uvicorn[standard]==0.27.0
 sqlalchemy==2.0.36
 jinja2==3.1.3
 pandas==2.2.0
+psycopg2-binary==2.9.9  # ← NUEVO: Driver de PostgreSQL
+python-dotenv==1.0.0    # ← NUEVO: Para leer .env (opcional)
