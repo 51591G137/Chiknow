@@ -3,16 +3,15 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Leer URL de base de datos desde variable de entorno
-# Por defecto: SQLite para desarrollo local
-# En Render: Automáticamente usa PostgreSQL
+# Leer DATABASE_URL desde variable de entorno
+# Por defecto SQLite para desarrollo local
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
-# Fix para Render: Render usa "postgres://" pero SQLAlchemy necesita "postgresql://"
+# FIX IMPORTANTE: Render usa "postgres://" pero SQLAlchemy necesita "postgresql://"
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Configuración del engine
+# Configurar conexión
 connect_args = {}
 if "sqlite" in DATABASE_URL:
     connect_args = {"check_same_thread": False}
