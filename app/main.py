@@ -7,8 +7,6 @@ from typing import List, Optional
 import os
 
 # Importamos nuestros módulos locales
-from app import models, service, repository, database
-# O:
 from . import models, service, repository, database
 
 # --- CAPA DE ARRANQUE ---
@@ -20,9 +18,8 @@ print("✅ Base de datos inicializada")
 # CREAR APP
 app = FastAPI(title="Chiknow", version="1.0.0")
 
-# ... resto del código
-
-base_path = os.path.dirname(os.path.realpath(__file__))
+# Rutas relativas al proyecto (un nivel arriba de app/)
+base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 static_path = os.path.join(base_path, "static")
 templates_path = os.path.join(base_path, "templates")
 
