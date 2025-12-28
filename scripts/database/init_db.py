@@ -7,9 +7,10 @@ import sys
 import os
 
 # Añadir el directorio raíz al path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from app.config import config
+from app.database import engine
 
-from database import engine, Base
 import models
 
 def init_database():

@@ -1,15 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
+from config import config  # ← Solo esta línea
 
-# Leer DATABASE_URL desde variable de entorno
-# Por defecto SQLite para desarrollo local
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
-
-# FIX IMPORTANTE: Render usa "postgres://" pero SQLAlchemy necesita "postgresql://"
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Obtener URL de base de datos según configuración
+DATABASE_URL = config.get_database_url()
 
 # Configurar conexión
 connect_args = {}

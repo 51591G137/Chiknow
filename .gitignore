@@ -1,9 +1,16 @@
-# Base de datos local (NO subir)
-test.db
-*.db
+# Base de datos local
+data/test.db
+data/*.db
+data/*.db-journal
 
-# Variables de entorno (NO subir)
+# Variables de entorno
 .env
+.env.local
+.env.*.local
+
+# Backups
+backups/*.sql
+backups/*.db
 
 # Python
 __pycache__/
@@ -11,16 +18,36 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.pyc
+app/__pycache__/
+scripts/**/__pycache__/
+
+# Virtual environments
 venv/
 env/
 ENV/
-
-# Logs
-logs/
-*.log
+.venv/
 
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporales
+*.tmp
+*.bak
+consolidado_total.txt
+
+# Tests (si tienes coverage)
+.coverage
+htmlcov/
+.pytest_cache/

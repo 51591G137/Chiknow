@@ -1,19 +1,10 @@
 services:
-  # Base de datos PostgreSQL
-  - type: pserv
-    name: chiknow-db
-    env: docker
-    plan: free
-    databaseName: chiknow
-    databaseUser: chiknow
-    
-  # Aplicación web
   - type: web
     name: chiknow-app
     env: python
     runtime: python-3.12.0
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     autoDeploy: true
     
     envVars:
@@ -23,5 +14,3 @@ services:
         fromDatabase:
           name: chiknow-db
           property: connectionString
-      - key: DEBUG
-        value: false

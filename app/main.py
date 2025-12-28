@@ -7,10 +7,9 @@ from typing import List, Optional
 import os
 
 # Importamos nuestros módulos locales
-import models
-import service
-import repository
-import database
+from app import models, service, repository, database
+# O:
+from . import models, service, repository, database
 
 # --- CAPA DE ARRANQUE ---
 # Crear tablas si no existen
