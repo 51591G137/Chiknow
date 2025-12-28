@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from config import config  # ← Solo esta línea
+from app.config import config
+# O:
+from .config import config  # Import relativo
 
 # Obtener URL de base de datos según configuración
 DATABASE_URL = config.get_database_url()
