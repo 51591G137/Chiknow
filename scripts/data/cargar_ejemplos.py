@@ -26,10 +26,10 @@ import unicodedata
 import re
 
 # Añadir el directorio raíz al path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database import SessionLocal, engine, Base
-import models
+from app.database import SessionLocal, engine, Base
+from app import models
 
 def normalizar_nombre_columna(nombre):
     """
@@ -68,11 +68,9 @@ def mapear_columnas(columnas_csv):
         'id': 'id',
         
         'hanzi': 'hanzi',
-        'hanzi': 'hanzi',
         'frase': 'hanzi',
         'caracteres': 'hanzi',
         
-        'pinyin': 'pinyin',
         'pinyin': 'pinyin',
         'romanizacion': 'pinyin',
         
@@ -117,7 +115,7 @@ def mapear_columnas(columnas_csv):
     
     return mapeo
 
-def cargar_ejemplos_desde_csv(csv_path: str = "datos/ejemplos.csv"):
+def cargar_ejemplos_desde_csv(csv_path: str = "data/ejemplos.csv"):
     """
     Carga o actualiza ejemplos desde CSV
     
@@ -279,8 +277,8 @@ def main():
     
     # Buscar el archivo en múltiples ubicaciones
     posibles_rutas = [
-        "datos/ejemplos.csv",
-        "../datos/ejemplos.csv",
+        "data/ejemplos.csv",
+        "../data/ejemplos.csv",
         "ejemplos.csv"
     ]
     

@@ -13,11 +13,9 @@ SOLO usar cuando:
 """
 import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-# Añadir el directorio raíz al path
-root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, root_dir)
-
+import subprocess
 from datetime import datetime
 from dotenv import load_dotenv
 import shutil
@@ -26,19 +24,32 @@ load_dotenv()
 
 def verificar_prerequisitos():
     """Verifica que todo esté listo"""
-    test_db_path = os.path.join(root_dir, "data", "test.db")
-    
-    if not os.path.exists(test_db_path):
-        print(f"❌ No existe {test_db_path}")
+    # CORREGIDO: usar data/test.db
+    if not os.path.exists("data/test.db"):
+        print("❌ No existe data/test.db")
         print("   No hay datos locales para subir")
         return False
     
+    # Verificar que existe DATABASE_URL_PRODUCTION
     render_url = os.getenv("DATABASE_URL_PRODUCTION")
     if not render_url:
         print("❌ DATABASE_URL_PRODUCTION no configurada en .env")
         return False
     
-    print("✅ Prerequisitos verificados")
+    # Verificar que pg_dump está instalado
+    try:
+        subprocess.run(["pg_dump", "--version"], 
+                      stdout=subprocess.PIPE, 
+                      stderr=subprocess.PIPE, 
+                      check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("❌ pg_dump no está instalado")
+        print("\n💡 Instalar PostgreSQL client:")
+        print("   Mac: brew install postgresql")
+        print("   Ubuntu: sudo apt install postgresql-client")
+        print("   Windows: Descargar desde postgresql.org")
+        return False
+    
     return True
 
 def bd_local_a_render():
@@ -54,6 +65,7 @@ def bd_local_a_render():
     print("  ❌ Es IRREVERSIBLE sin backup")
     print("\n" + "="*70)
     
+    # Verificar prerequisitos
     if not verificar_prerequisitos():
         return False
     
@@ -78,92 +90,101 @@ def bd_local_a_render():
     
     print("\n🔴 CONFIRMACIÓN FINAL 3/3:")
     print("Esta es tu ÚLTIMA oportunidad para cancelar.")
+    print("Los datos de producción se BORRARÁN en 5 segundos.")
     conf3 = input("Escribe 'EJECUTAR AHORA' para continuar: ")
     if conf3 != "EJECUTAR AHORA":
         print("\n✅ Operación cancelada")
         return False
     
     try:
-        backups_dir = os.path.join(root_dir, "backups")
-        os.makedirs(backups_dir, exist_ok=True)
+        os.makedirs("backups", exist_ok=True)
         
-        # Paso 1: BACKUP de local
-        print("\n💾 Paso 1: Backup de base de datos local...")
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_local = os.path.join(backups_dir, f"local_pre_upload_{timestamp}.db")
-        test_db_path = os.path.join(root_dir, "data", "test.db")
+        # Paso 1: BACKUP de producción (MUY IMPORTANTE)
+        print("\n💾 Paso 1: BACKUP de producción (por seguridad)...")
+        backup_file = f"backups/render_backup_pre_upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
         
-        shutil.copy2(test_db_path, backup_local)
-        size_mb = os.path.getsize(backup_local) / 1024 / 1024
-        print(f"✅ Backup local guardado: {backup_local} ({size_mb:.2f} MB)")
+        print("   Conectando a Render...")
+        with open(backup_file, 'w', encoding='utf-8') as f:
+            subprocess.run(
+                ["pg_dump", render_url],
+                stdout=f,
+                stderr=subprocess.PIPE,
+                check=True,
+                encoding='utf-8'
+            )
         
-        # Paso 2: Conectar a bases de datos
-        from sqlalchemy import create_engine, text
-        from sqlalchemy.orm import sessionmaker
-        from app import models
+        backup_size = os.path.getsize(backup_file) / 1024 / 1024  # MB
+        print(f"✅ Backup guardado: {backup_file} ({backup_size:.2f} MB)")
+        print("   ⚠️  GUARDA ESTE ARCHIVO. Es tu única forma de recuperar datos.")
         
-        print("\n🔌 Paso 2: Conectando a bases de datos...")
+        # Paso 2: Copiar test.db como backup
+        print("\n💾 Paso 2: Backup de data/test.db local...")
+        backup_local = f"backups/local_pre_upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+        shutil.copy2("data/test.db", backup_local)
+        print(f"✅ Backup local guardado: {backup_local}")
         
-        # Conectar a local
-        engine_local = create_engine(
-            f"sqlite:///{test_db_path}",
-            connect_args={"check_same_thread": False}
-        )
-        Session_local = sessionmaker(bind=engine_local)
-        db_local = Session_local()
-        print("   ✅ Conectado a BD local")
-        
-        # Conectar a producción
-        engine_prod = create_engine(
-            render_url,
-            pool_size=10,
-            max_overflow=20,
-            pool_pre_ping=True
-        )
-        Session_prod = sessionmaker(bind=engine_prod)
-        db_prod = Session_prod()
-        print("   ✅ Conectado a Render")
-        
-        # Paso 3: Limpiar producción
+        # Paso 3: Conectar a producción y LIMPIAR
         print("\n🗑️  Paso 3: Limpiando base de datos de producción...")
-        print("   (Eliminando en orden para respetar foreign keys)")
+        print("   ⚠️  Borrando todos los datos...")
+        
+        from sqlalchemy import create_engine, text
+        engine_prod = create_engine(render_url)
         
         with engine_prod.connect() as conn:
-            # Borrar en el orden correcto (inverso a las dependencias)
+            # Desactivar foreign keys temporalmente
+            conn.execute(text("SET session_replication_role = 'replica';"))
+            
+            # Borrar en orden (por dependencias)
             tables_to_clear = [
-                "sm2_reviews",           # Depende de tarjetas y sesiones
-                "sm2_progress",          # Depende de tarjetas
-                "sm2_sessions",          # Independiente
-                "ejemplo_activacion",    # Depende de ejemplos
-                "ejemplo_jerarquia",     # Depende de ejemplos
-                "hsk_ejemplo",           # Depende de HSK y ejemplos
-                "tarjetas",              # Depende de diccionario, HSK y ejemplos
-                "ejemplos",              # Independiente
-                "notas",                 # Depende de HSK
-                "diccionario",           # Depende de HSK
-                "hsk"                    # Base, se borra al final
+                "sm2_reviews",
+                "sm2_progress",
+                "sm2_sessions",
+                "ejemplo_activacion",
+                "ejemplo_jerarquia",
+                "hsk_ejemplo",
+                "tarjetas",
+                "ejemplos",
+                "notas",
+                "diccionario",
+                "hsk"
             ]
             
             for table in tables_to_clear:
                 try:
                     result = conn.execute(text(f"DELETE FROM {table}"))
-                    conn.commit()
                     print(f"   ✅ {table}: {result.rowcount} registros eliminados")
                 except Exception as e:
-                    error_msg = str(e)[:80]
-                    print(f"   ⚠️  {table}: {error_msg}")
+                    print(f"   ⚠️  {table}: {e}")
+            
+            conn.commit()
+            
+            # Reactivar foreign keys
+            conn.execute(text("SET session_replication_role = 'origin';"))
+            conn.commit()
         
         print("✅ Base de datos de producción limpiada")
         
         # Paso 4: Copiar datos de local a producción
         print("\n📥 Paso 4: Subiendo datos locales a producción...")
         
+        # Conectar a local
+        from sqlalchemy import create_engine as create_eng
+        from sqlalchemy.orm import sessionmaker
+        from app import models
+        
+        engine_local = create_eng("sqlite:///./data/test.db", connect_args={"check_same_thread": False})
+        Session_local = sessionmaker(bind=engine_local)
+        db_local = Session_local()
+        
+        # Conectar a producción
+        Session_prod = sessionmaker(bind=engine_prod)
+        db_prod = Session_prod()
+        
         try:
             # Copiar HSK
             print("   Subiendo HSK...")
             hsk_items = db_local.query(models.HSK).all()
-            
-            for idx, item in enumerate(hsk_items):
+            for item in hsk_items:
                 new_item = models.HSK(
                     id=item.id,
                     numero=item.numero,
@@ -178,13 +199,8 @@ def bd_local_a_render():
                     significado_ejemplo=item.significado_ejemplo
                 )
                 db_prod.add(new_item)
-                
-                if (idx + 1) % 100 == 0:
-                    db_prod.commit()
-                    print(f"      Subidos: {idx + 1}/{len(hsk_items)}")
-            
             db_prod.commit()
-            print(f"   ✅ HSK: {len(hsk_items)} palabras")
+            print(f"   ✅ HSK: {len(hsk_items)} palabras subidas")
             
             # Copiar Diccionario
             print("   Subiendo Diccionario...")
@@ -198,21 +214,6 @@ def bd_local_a_render():
                 db_prod.add(new_item)
             db_prod.commit()
             print(f"   ✅ Diccionario: {len(dict_items)} entradas")
-            
-            # Copiar Notas
-            print("   Subiendo Notas...")
-            notas = db_local.query(models.Notas).all()
-            for item in notas:
-                new_item = models.Notas(
-                    id=item.id,
-                    hsk_id=item.hsk_id,
-                    nota=item.nota,
-                    created_at=item.created_at,
-                    updated_at=item.updated_at
-                )
-                db_prod.add(new_item)
-            db_prod.commit()
-            print(f"   ✅ Notas: {len(notas)} notas")
             
             # Copiar Ejemplos
             print("   Subiendo Ejemplos...")
@@ -232,20 +233,6 @@ def bd_local_a_render():
                 db_prod.add(new_item)
             db_prod.commit()
             print(f"   ✅ Ejemplos: {len(ejemplos)} frases")
-            
-            # Copiar Relaciones HSK-Ejemplo
-            print("   Subiendo Relaciones HSK-Ejemplo...")
-            relaciones = db_local.query(models.HSKEjemplo).all()
-            for item in relaciones:
-                new_item = models.HSKEjemplo(
-                    id=item.id,
-                    hsk_id=item.hsk_id,
-                    ejemplo_id=item.ejemplo_id,
-                    posicion=item.posicion
-                )
-                db_prod.add(new_item)
-            db_prod.commit()
-            print(f"   ✅ Relaciones: {len(relaciones)} enlaces")
             
             # Copiar Tarjetas
             print("   Subiendo Tarjetas...")
@@ -285,58 +272,52 @@ def bd_local_a_render():
                 )
                 db_prod.add(new_item)
             db_prod.commit()
-            print(f"   ✅ Progreso SM2: {len(progress)} registros")
+            print(f"   ✅ Progreso: {len(progress)} registros")
             
-            # Copiar Sesiones SM2
-            print("   Subiendo Sesiones SM2...")
-            sessions = db_local.query(models.SM2Session).all()
-            for item in sessions:
-                new_item = models.SM2Session(
+            # Copiar Relaciones HSK-Ejemplo
+            print("   Subiendo Relaciones HSK-Ejemplo...")
+            relaciones = db_local.query(models.HSKEjemplo).all()
+            for item in relaciones:
+                new_item = models.HSKEjemplo(
                     id=item.id,
-                    fecha_inicio=item.fecha_inicio,
-                    fecha_fin=item.fecha_fin,
-                    tarjetas_estudiadas=item.tarjetas_estudiadas,
-                    tarjetas_correctas=item.tarjetas_correctas,
-                    tarjetas_incorrectas=item.tarjetas_incorrectas
+                    hsk_id=item.hsk_id,
+                    ejemplo_id=item.ejemplo_id,
+                    posicion=item.posicion
                 )
                 db_prod.add(new_item)
             db_prod.commit()
-            print(f"   ✅ Sesiones: {len(sessions)} sesiones")
+            print(f"   ✅ Relaciones: {len(relaciones)} enlaces")
             
-            # Copiar Reviews SM2
-            print("   Subiendo Reviews SM2...")
-            reviews = db_local.query(models.SM2Review).all()
-            for item in reviews:
-                new_item = models.SM2Review(
+            # Copiar Notas
+            print("   Subiendo Notas...")
+            notas = db_local.query(models.Notas).all()
+            for item in notas:
+                new_item = models.Notas(
                     id=item.id,
-                    tarjeta_id=item.tarjeta_id,
-                    session_id=item.session_id,
-                    quality=item.quality,
-                    respuesta_usuario=item.respuesta_usuario,
-                    previous_easiness=item.previous_easiness,
-                    new_easiness=item.new_easiness,
-                    previous_interval=item.previous_interval,
-                    new_interval=item.new_interval,
-                    previous_estado=item.previous_estado,
-                    new_estado=item.new_estado,
-                    hanzi_fallados=item.hanzi_fallados,
-                    frase_fallada=item.frase_fallada,
-                    fecha=item.fecha
+                    hsk_id=item.hsk_id,
+                    nota=item.nota,
+                    created_at=item.created_at,
+                    updated_at=item.updated_at
                 )
                 db_prod.add(new_item)
             db_prod.commit()
-            print(f"   ✅ Reviews: {len(reviews)} revisiones")
+            print(f"   ✅ Notas: {len(notas)} notas")
             
             print("\n" + "="*70)
             print("✅ SINCRONIZACIÓN COMPLETADA EXITOSAMENTE")
             print("="*70)
-            print(f"\n📁 Backup guardado en:")
-            print(f"   {backup_local}")
-            print("\n🌐 Los usuarios ahora verán estos datos en:")
-            print(f"   https://chiknow.onrender.com")
+            print(f"\n📁 Backups guardados en: backups/")
+            print(f"   - Producción (antes): {backup_file}")
+            print(f"   - Local (antes): {backup_local}")
+            print("\n💡 Los usuarios ahora verán estos datos en:")
+            print(f"   {os.getenv('RENDER_APP_URL', 'tu-app.onrender.com')}")
             
         except Exception as e:
             print(f"\n❌ ERROR durante la copia: {e}")
+            print("\n⚠️  La base de datos de producción puede estar en estado inconsistente")
+            print(f"   Restaurar desde backup: {backup_file}")
+            print("\n📖 Para restaurar:")
+            print(f"   psql '{render_url}' < {backup_file}")
             import traceback
             traceback.print_exc()
             return False
@@ -346,6 +327,9 @@ def bd_local_a_render():
         
         return True
         
+    except subprocess.CalledProcessError as e:
+        print(f"\n❌ Error en pg_dump: {e}")
+        return False
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
@@ -355,6 +339,7 @@ def bd_local_a_render():
 if __name__ == "__main__":
     print("\n⚠️  ⚠️  ⚠️  SCRIPT PELIGROSO ⚠️  ⚠️  ⚠️")
     print("\nEste script SOBRESCRIBE la base de datos de producción.")
+    print("Los usuarios PERDERÁN todos sus datos.")
     print("\n¿Estás seguro de que quieres continuar?")
     
     inicial = input("\nEscribe 'CONTINUAR' para proceder o Enter para cancelar: ")
@@ -362,9 +347,4 @@ if __name__ == "__main__":
         print("\n✅ Operación cancelada. Buena decisión.")
         sys.exit(0)
     
-    exito = bd_local_a_render()
-    
-    if exito:
-        print("\n🎉 ¡Sincronización exitosa!")
-    else:
-        print("\n❌ La sincronización falló")
+    bd_local_a_render()

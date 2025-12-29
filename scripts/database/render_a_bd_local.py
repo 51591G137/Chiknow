@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 Descarga base de datos de Render (producción) a local
-USO: python scripts/database/render-a-bd_local.py
+USO: python scripts/database/render_a_bd_local.py
 
 NO requiere pg_dump - usa SQLAlchemy directamente
 """
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from datetime import datetime
 from dotenv import load_dotenv
@@ -22,7 +22,8 @@ def render_a_bd_local():
     print("📥 SINCRONIZACIÓN: RENDER (PRODUCCIÓN) → LOCAL")
     print("="*70)
     
-    local_db = "test.db"
+    # CORREGIDO: usar data/test.db
+    local_db = "data/test.db"
     render_url = os.getenv("DATABASE_URL_PRODUCTION")
     
     if not render_url:
@@ -35,6 +36,7 @@ def render_a_bd_local():
         render_url = render_url.replace("postgres://", "postgresql://", 1)
     
     print(f"🔗 URL de producción: {render_url.split('@')[0]}@***")
+    print(f"💾 BD local: {local_db}")
     print("\n⚠️  Esta operación sobrescribirá tu base de datos local")
     print("   Se hará un backup primero")
     
@@ -45,8 +47,11 @@ def render_a_bd_local():
         return False
     
     try:
-        # Paso 1: Backup de local
+        # Asegurar que existe el directorio data/
+        os.makedirs("data", exist_ok=True)
         os.makedirs("backups", exist_ok=True)
+        
+        # Paso 1: Backup de local
         print("\n💾 Paso 1: Backup de base de datos local...")
         backup_local = None
         if os.path.exists(local_db):
@@ -57,21 +62,44 @@ def render_a_bd_local():
         else:
             print("   (No existe BD local previa)")
         
-        # Paso 2: Eliminar test.db actual
+        # Cerrar cualquier conexión existente antes de eliminar
+        try:
+            # NO importar nada todavía, solo cerrar si existe
+            import sys
+            # Limpiar imports previos
+            mods_to_remove = [k for k in sys.modules.keys() if k.startswith('app.')]
+            for mod in mods_to_remove:
+                del sys.modules[mod]
+            print("   ✅ Módulos limpiados")
+        except:
+            pass
+        
+        # Paso 2: Eliminar test.db actual y cualquier lock
         print("\n🗑️  Paso 2: Eliminando base de datos local actual...")
         if os.path.exists(local_db):
             os.remove(local_db)
             print("✅ Base de datos local eliminada")
         
-        # Paso 3: Recrear BD local vacía
+        # Eliminar archivos auxiliares de SQLite si existen
+        for ext in ['-journal', '-wal', '-shm']:
+            aux_file = local_db + ext
+            if os.path.exists(aux_file):
+                os.remove(aux_file)
+                print(f"✅ {aux_file} eliminado")
+        
+        # Paso 3: CRÍTICO - Configurar entorno ANTES de importar
         print("\n🔨 Paso 3: Creando estructura de base de datos local...")
         
         # Asegurar que estamos en modo local
         os.environ["DB_ENVIRONMENT"] = "local"
+        os.environ["DATABASE_URL_LOCAL"] = f"sqlite:///./data/test.db"
+        print(f"   ✅ Entorno configurado: {os.environ['DATABASE_URL_LOCAL']}")
         
-        # Importar después de cambiar el entorno
-        from database import Base, engine
-        import models
+        # AHORA SÍ importar (usará la configuración correcta)
+        from app.database import Base, engine
+        from app import models
+        
+        print(f"   ✅ Engine URL: {engine.url}")
         
         # Crear todas las tablas vacías
         Base.metadata.create_all(bind=engine)
@@ -87,7 +115,7 @@ def render_a_bd_local():
         db_prod = Session_prod()
         
         # Paso 5: Conectar a local
-        from database import SessionLocal
+        from app.database import SessionLocal
         db_local = SessionLocal()
         
         # Lista de tablas en orden correcto (respetando dependencias)
@@ -150,11 +178,23 @@ def render_a_bd_local():
             # Recrear índices y secuencias
             print("\n🔧 Paso 6: Reconstruyendo índices y secuencias...")
             
-            # Para SQLite, resetear autoincrementos
+            # Para SQLite, resetear autoincrementos solo si la tabla existe
             if "sqlite" in str(db_local.bind.url):
-                db_local.execute("DELETE FROM sqlite_sequence")
-                db_local.commit()
-                print("   ✅ Secuencias SQLite reseteadas")
+                from sqlalchemy import text as sql_text
+                try:
+                    # Verificar si existe la tabla sqlite_sequence
+                    result = db_local.execute(sql_text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_sequence'"
+                    ))
+                    if result.fetchone():
+                        db_local.execute(sql_text("DELETE FROM sqlite_sequence"))
+                        db_local.commit()
+                        print("   ✅ Secuencias SQLite reseteadas")
+                    else:
+                        print("   ℹ️  No hay secuencias que resetear (BD nueva)")
+                except Exception as e:
+                    print(f"   ⚠️  No se pudieron resetear secuencias: {e}")
+                    # No es crítico, continuar
             
             print("\n" + "="*70)
             print("✅ SINCRONIZACIÓN COMPLETADA EXITOSAMENTE")
@@ -169,7 +209,7 @@ def render_a_bd_local():
             # Verificar tamaños
             if os.path.exists(local_db):
                 size_mb = os.path.getsize(local_db) / 1024 / 1024
-                print(f"   Tamaño de test.db: {size_mb:.2f} MB")
+                print(f"   Tamaño de {local_db}: {size_mb:.2f} MB")
             
             print("\n💡 Ahora puedes trabajar localmente con una copia exacta de producción")
             print("   Recuerda: Los cambios locales NO afectarán a producción")

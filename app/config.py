@@ -16,7 +16,8 @@ class Config:
     
     # URLs de base de datos - usar DATABASE_URL como variable principal
     DATABASE_URL = os.getenv("DATABASE_URL", "")
-    DATABASE_URL_LOCAL = os.getenv("DATABASE_URL_LOCAL", "sqlite:///./test.db")
+    # CORREGIDO: usar data/test.db por defecto
+    DATABASE_URL_LOCAL = os.getenv("DATABASE_URL_LOCAL", "sqlite:///./data/test.db")
     DATABASE_URL_PRODUCTION = os.getenv("DATABASE_URL_PRODUCTION", "")
     
     @classmethod
