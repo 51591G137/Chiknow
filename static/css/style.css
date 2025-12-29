@@ -822,6 +822,15 @@ header h1 {
     border: 2px solid #e2e8f0;
 }
 
+/* Contenedor de botones inicial */
+.initial-buttons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 500px;
+    margin: 0 auto 1.5rem;
+}
+
 .help-text {
     color: #64748b;
     margin-top: 1rem;
@@ -859,6 +868,34 @@ header h1 {
     gap: 1.5rem;
     flex-grow: 1;
     justify-content: center;
+}
+
+/* Botón de audio en tarjeta SM2 */
+.btn-audio-card {
+    background: var(--warning);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    margin-bottom: 1rem;
+}
+
+.btn-audio-card:hover {
+    background: #ea580c;
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
+}
+
+.btn-audio-card:active {
+    transform: scale(0.95);
 }
 
 /* Botones SM2 específicos */
@@ -1141,146 +1178,6 @@ header h1 {
 }
 
 /* ============================================================================
-   RESPONSIVE
-   ============================================================================ */
-@media (max-width: 768px) {
-    body {
-        padding: 15px 15px 80px 15px;
-    }
-    
-    .card {
-        padding: 16px;
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .card-main-content {
-        flex-direction: column;
-        margin-bottom: 15px;
-    }
-    
-    .hanzi-lg {
-        font-size: 2.5rem;
-    }
-    
-    .info {
-        margin-left: 0;
-        margin-bottom: 15px;
-    }
-    
-    .btn-add, .btn-remove {
-        margin-left: 0;
-        width: 45px;
-        height: 45px;
-        font-size: 1.8rem;
-    }
-    
-    header h1 {
-        font-size: 2rem;
-    }
-    
-    .search-and-filters {
-        width: 100%;
-    }
-    
-    .filter-buttons {
-        width: 100%;
-    }
-    
-    .filter-btn {
-        flex: 1;
-        padding: 8px 12px;
-        font-size: 0.85rem;
-    }
-    
-    .stats-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .tarjeta-grupo-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .tarjeta-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .tarjeta-content {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-    }
-    
-    .notification, .notificacion {
-        left: 20px;
-        right: 20px;
-        max-width: none;
-    }
-    
-    .btn-large {
-        width: 100%;
-    }
-    
-    /* Responsive para SM2 */
-    .flashcard {
-        padding: 1.5rem;
-        min-height: 250px;
-    }
-    
-    .hanzi-large {
-        font-size: 3rem;
-    }
-    
-    .pinyin-text {
-        font-size: 1.5rem;
-    }
-    
-    .answer-text {
-        font-size: 2rem;
-    }
-    
-    .sm2-buttons {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-    
-    .sm2-btn {
-        padding: 1rem;
-    }
-    
-    /* Responsive para Ejemplos */
-    .ejemplo-card {
-        padding: 16px;
-    }
-    
-    .hanzi-ejemplo {
-        font-size: 2rem;
-    }
-    
-    .ejemplo-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-    
-    .badges {
-        flex-wrap: wrap;
-    }
-    
-    .tabs {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    .tab-btn {
-        white-space: nowrap;
-        padding: 10px 16px;
-    }
-}
-
-/* ============================================================================
    PÁGINA SM2 - COMPONENTES ESPECÍFICOS
    ============================================================================ */
 
@@ -1367,6 +1264,60 @@ header h1 {
     font-weight: 700;
 }
 
+/* Información adicional de la palabra */
+.info-palabra-completa {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+}
+
+.info-palabra-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    min-width: 80px;
+}
+
+.info-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    flex: 1;
+}
+
+.info-value.hanzi-info {
+    color: #6366f1;
+    font-family: 'Noto Sans SC', 'SimHei', sans-serif;
+    font-size: 1.8rem;
+}
+
+.info-value.pinyin-info {
+    color: #dc2626;
+    font-style: italic;
+}
+
+.info-value.espanol-info {
+    color: #475569;
+}
+
 /* Botones de acción para respuesta */
 .acciones-respuesta {
     margin: 1.5rem 0;
@@ -1444,27 +1395,6 @@ header h1 {
     color: #6366f1;
 }
 
-.btn-stats {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    padding: 0.75rem 1.25rem;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    z-index: 100;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    transition: all 0.2s;
-}
-
-.btn-stats:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-}
-
 /* Estilos dinámicos para detección automática */
 .respuesta-usuario-box.respuesta-correcta {
     background: #dcfce7;
@@ -1494,4 +1424,163 @@ header h1 {
 .respuesta-usuario-box.respuesta-vacia .label,
 .respuesta-usuario-box.respuesta-vacia .texto {
     color: #6b7280;
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+@media (max-width: 768px) {
+    body {
+        padding: 15px 15px 80px 15px;
+    }
+    
+    .card {
+        padding: 16px;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .card-main-content {
+        flex-direction: column;
+        margin-bottom: 15px;
+    }
+    
+    .hanzi-lg {
+        font-size: 2.5rem;
+    }
+    
+    .info {
+        margin-left: 0;
+        margin-bottom: 15px;
+    }
+    
+    .btn-add, .btn-remove {
+        margin-left: 0;
+        width: 45px;
+        height: 45px;
+        font-size: 1.8rem;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    .search-and-filters {
+        width: 100%;
+    }
+    
+    .filter-buttons {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .tarjeta-grupo-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tarjeta-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tarjeta-content {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    
+    .notification, .notificacion {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+    }
+    
+    .btn-large {
+        width: 100%;
+    }
+
+    .initial-buttons-container {
+        max-width: 100%;
+    }
+    
+    /* Responsive para SM2 */
+    .flashcard {
+        padding: 1.5rem;
+        min-height: 250px;
+    }
+    
+    .hanzi-large {
+        font-size: 3rem;
+    }
+    
+    .pinyin-text {
+        font-size: 1.5rem;
+    }
+    
+    .answer-text {
+        font-size: 2rem;
+    }
+    
+    .sm2-buttons {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .sm2-btn {
+        padding: 1rem;
+    }
+
+    .btn-audio-card {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+
+    .info-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .info-label {
+        min-width: auto;
+    }
+    
+    /* Responsive para Ejemplos */
+    .ejemplo-card {
+        padding: 16px;
+    }
+    
+    .hanzi-ejemplo {
+        font-size: 2rem;
+    }
+    
+    .ejemplo-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .badges {
+        flex-wrap: wrap;
+    }
+    
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .tab-btn {
+        white-space: nowrap;
+        padding: 10px 16px;
+    }
 }

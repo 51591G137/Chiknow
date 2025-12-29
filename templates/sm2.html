@@ -13,11 +13,6 @@
         <p class="subtitle">Repaso espaciado inteligente (0-2)</p>
     </header>
 
-    <!-- Botón flotante de estadísticas -->
-    <button class="btn-stats" onclick="mostrarEstadisticasDetalladas()">
-        📊 Ver Estadísticas
-    </button>
-
     <main id="content">
         <!-- Estadísticas -->
         <div class="stats-container">
@@ -37,9 +32,14 @@
 
         <!-- Área de estudio -->
         <div id="area-inicial" class="study-area">
-            <button onclick="iniciarEstudio()" class="btn btn-primary btn-large">
-                📚 Iniciar sesión de estudio
-            </button>
+            <div class="initial-buttons-container">
+                <button onclick="iniciarEstudio()" class="btn btn-primary btn-large">
+                    📚 Iniciar sesión de estudio
+                </button>
+                <button onclick="mostrarEstadisticasDetalladas()" class="btn btn-primary btn-large">
+                    📊 Ver Estadísticas
+                </button>
+            </div>
             <p class="help-text">
                 Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
             </p>
@@ -83,13 +83,18 @@
                         </div>
                     </div>
                     
+                    <!-- Información adicional de la palabra -->
+                    <div class="info-palabra-completa" id="info-palabra-completa">
+                        <!-- Se llenará dinámicamente con hanzi, pinyin y español -->
+                    </div>
+                    
                     <!-- Botones de acción para la respuesta -->
-                    <div class="acciones-respuesta">
+                    <div class="acciones-respuesta" id="acciones-respuesta">
                         <button onclick="editarRespuesta()" class="btn btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                             <span>✏️</span>
                             <span>Editar respuesta</span>
                         </button>
-                        <button onclick="anadirTraduccion()" class="btn btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <button onclick="anadirTraduccion()" class="btn btn-secondary" id="btn-anadir-traduccion" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                             <span>➕</span>
                             <span>Añadir como válida</span>
                         </button>
@@ -214,7 +219,7 @@
         window.addEventListener('DOMContentLoaded', cargarEstadisticas);
 
         async function cargarEstadisticas() {
-            console.log('🔄 Cargando estadísticas...');
+            console.log('📄 Cargando estadísticas...');
             try {
                 const response = await fetch('/api/sm2/statistics');
                 console.log('📊 Respuesta:', response.status);
@@ -256,7 +261,7 @@
                 if (!cardsResponse.ok) throw new Error(`HTTP ${cardsResponse.status}`);
                 
                 tarjetasEstudio = await cardsResponse.json();
-                console.log(`📝 ${tarjetasEstudio.length} tarjetas`);
+                console.log(`🃏 ${tarjetasEstudio.length} tarjetas`);
                 
                 if (tarjetasEstudio.length === 0) {
                     mostrarNotificacion('No hay tarjetas pendientes', 'info');
@@ -287,7 +292,12 @@
             console.log('🃏 Tarjeta:', tarjetaActual);
             
             let mostradoHTML = '';
-            if (tarjetaActual.audio) mostradoHTML += `<div class="audio-indicator">🔊 Audio</div>`;
+            
+            // Si hay audio, agregar botón de audio controlable
+            if (tarjetaActual.audio) {
+                mostradoHTML += `<button class="btn-audio-card" onclick="reproducirAudio('${tarjetaActual.hanzi}')" title="Reproducir audio">🔊</button>`;
+            }
+            
             if (tarjetaActual.mostrado1) mostradoHTML += `<div class="hanzi-large">${tarjetaActual.mostrado1}</div>`;
             if (tarjetaActual.mostrado2) mostradoHTML += `<div class="pinyin-text">${tarjetaActual.mostrado2}</div>`;
             
@@ -301,21 +311,40 @@
             inputRespuesta.focus();
             
             actualizarProgreso();
+        }
+
+        function determinarRespuestaEsperada() {
+            // Determinar si la tarjeta espera español o hanzi
+            // Tarjetas 1, 2, 3: muestran hanzi/pinyin/audio → esperan español
+            // Tarjetas 4, 5, 6: muestran español → esperan hanzi
             
-            if (tarjetaActual.audio && tarjetaActual.hanzi) {
-                reproducirAudio(tarjetaActual.hanzi);
+            // Verificar si mostrado1 contiene el español (tarjetas 4, 5, 6)
+            if (tarjetaActual.mostrado1 && tarjetaActual.espanol && 
+                tarjetaActual.mostrado1.includes(tarjetaActual.espanol.split(',')[0].trim())) {
+                return 'hanzi';
             }
+            
+            return 'espanol';
         }
 
         function voltearTarjeta() {
             // Guardar respuesta del usuario
             respuestaUsuario = document.getElementById('respuesta-usuario').value.trim();
             
+            // Determinar qué tipo de respuesta se espera
+            const tipoRespuesta = determinarRespuestaEsperada();
+            
             // Mostrar comparación de respuestas
             document.getElementById('tu-respuesta-texto').textContent = respuestaUsuario || '(sin respuesta)';
             
-            // Usar espanol si existe, sino usar requerido
-            const respuestaCorrecta = tarjetaActual.espanol || tarjetaActual.requerido;
+            // Determinar respuesta correcta según el tipo
+            let respuestaCorrecta;
+            if (tipoRespuesta === 'hanzi') {
+                respuestaCorrecta = tarjetaActual.hanzi;
+            } else {
+                respuestaCorrecta = tarjetaActual.espanol || tarjetaActual.requerido;
+            }
+            
             document.getElementById('respuesta-correcta-texto').textContent = respuestaCorrecta;
             
             // DETECCIÓN AUTOMÁTICA: Verificar si la respuesta es correcta
@@ -325,26 +354,43 @@
             respuestaUsuarioBox.classList.remove('respuesta-correcta', 'respuesta-incorrecta', 'respuesta-vacia');
             
             if (respuestaUsuario && respuestaCorrecta) {
-                // Separar las respuestas válidas (pueden ser múltiples separadas por comas)
-                const respuestasValidas = respuestaCorrecta.split(',').map(r => r.trim().toLowerCase());
-                const respuestaUsuarioLower = respuestaUsuario.toLowerCase();
+                let esCorrecta = false;
                 
-                // Verificar si coincide con alguna respuesta válida
-                const esCorrecta = respuestasValidas.some(valida => 
-                    respuestaUsuarioLower === valida || 
-                    respuestaUsuarioLower.includes(valida) ||
-                    valida.includes(respuestaUsuarioLower)
-                );
+                if (tipoRespuesta === 'hanzi') {
+                    // Comparación exacta para hanzi
+                    esCorrecta = respuestaUsuario === respuestaCorrecta;
+                } else {
+                    // Comparación flexible para español (puede tener múltiples traducciones)
+                    const respuestasValidas = respuestaCorrecta.split(',').map(r => r.trim().toLowerCase());
+                    const respuestaUsuarioLower = respuestaUsuario.toLowerCase();
+                    
+                    esCorrecta = respuestasValidas.some(valida => 
+                        respuestaUsuarioLower === valida || 
+                        respuestaUsuarioLower.includes(valida) ||
+                        valida.includes(respuestaUsuarioLower)
+                    );
+                }
                 
-                // Aplicar clase según si es correcta o no
                 if (esCorrecta) {
                     respuestaUsuarioBox.classList.add('respuesta-correcta');
                 } else {
                     respuestaUsuarioBox.classList.add('respuesta-incorrecta');
                 }
             } else if (!respuestaUsuario) {
-                // Sin respuesta
                 respuestaUsuarioBox.classList.add('respuesta-vacia');
+            }
+            
+            // Mostrar información adicional de la palabra
+            mostrarInfoPalabraCompleta(tipoRespuesta);
+            
+            // Mostrar u ocultar botón de añadir traducción
+            const btnAnadirTraduccion = document.getElementById('btn-anadir-traduccion');
+            if (tipoRespuesta === 'hanzi') {
+                // Ocultar botón si se espera hanzi
+                btnAnadirTraduccion.style.display = 'none';
+            } else {
+                // Mostrar botón si se espera español
+                btnAnadirTraduccion.style.display = 'flex';
             }
             
             // Voltear tarjeta
@@ -372,8 +418,39 @@
             document.getElementById('easy-interval').textContent = `${easyDays}d`;
         }
 
+        function mostrarInfoPalabraCompleta(tipoRespuesta) {
+            // Construir información adicional de la palabra
+            let infoHTML = '<div class="info-palabra-items">';
+            
+            // Mostrar hanzi, pinyin y español (omitiendo el que ya se mostró como respuesta)
+            if (tipoRespuesta !== 'hanzi' && tarjetaActual.hanzi) {
+                infoHTML += `<div class="info-item">
+                    <span class="info-label">汉字</span>
+                    <span class="info-value hanzi-info">${tarjetaActual.hanzi}</span>
+                </div>`;
+            }
+            
+            if (tarjetaActual.pinyin) {
+                infoHTML += `<div class="info-item">
+                    <span class="info-label">Pinyin</span>
+                    <span class="info-value pinyin-info">${tarjetaActual.pinyin}</span>
+                </div>`;
+            }
+            
+            if (tipoRespuesta !== 'espanol' && tarjetaActual.espanol) {
+                infoHTML += `<div class="info-item">
+                    <span class="info-label">Español</span>
+                    <span class="info-value espanol-info">${tarjetaActual.espanol}</span>
+                </div>`;
+            }
+            
+            infoHTML += '</div>';
+            
+            document.getElementById('info-palabra-completa').innerHTML = infoHTML;
+        }
+
         async function responder(calidad) {
-            console.log(`📝 Calidad: ${calidad}, Respuesta: "${respuestaUsuario}"`);
+            console.log(`🎯 Calidad: ${calidad}, Respuesta: "${respuestaUsuario}"`);
             
             if (!sessionId) {
                 mostrarNotificacion('Error: No hay sesión activa', 'error');
@@ -456,6 +533,8 @@
                 utterance.lang = 'zh-CN';
                 utterance.rate = 0.8;
                 window.speechSynthesis.speak(utterance);
+            } else {
+                mostrarNotificacion('Tu navegador no soporta síntesis de voz', 'error');
             }
         }
 
@@ -488,7 +567,7 @@
             // Actualizar todas las tarjetas en tarjetasEstudio que tengan el mismo hsk_id
             tarjetasEstudio.forEach(tarjeta => {
                 if (tarjeta.hsk_id === hsk_id) {
-                    console.log(`📝 Actualizando tarjeta ${tarjeta.tarjeta_id}`);
+                    console.log(`🔍 Actualizando tarjeta ${tarjeta.tarjeta_id}`);
                     tarjeta.requerido = nuevoEspanol;
                     tarjeta.espanol = nuevoEspanol;
                 }
@@ -524,7 +603,7 @@
             }
             
             try {
-                console.log(`📝 Añadiendo traducción "${respuestaUsuario}" a hsk_id ${tarjetaActual.hsk_id}`);
+                console.log(`🔍 Añadiendo traducción "${respuestaUsuario}" a hsk_id ${tarjetaActual.hsk_id}`);
                 
                 // Llamar a la API para añadir traducción
                 const response = await fetch(`/api/hsk/add-traduccion/${tarjetaActual.hsk_id}?traduccion=${encodeURIComponent(respuestaUsuario)}`, {
@@ -558,11 +637,10 @@
                     // Actualizar tarjeta actual en memoria con las nuevas traducciones
                     if (tarjetaActual) {
                         tarjetaActual.requerido = result.espanol;
-                        tarjetaActual.espanol = result.espanol; // También actualizar el campo español
+                        tarjetaActual.espanol = result.espanol;
                     }
                     
-                    // NUEVO: Forzar actualización de todas las tarjetas en el array actual
-                    // que pertenezcan al mismo hsk_id
+                    // Actualizar todas las tarjetas en el array actual que pertenezcan al mismo hsk_id
                     actualizarTarjetasEnSesion(tarjetaActual.hsk_id, result.espanol);
                 }
             } catch (error) {
@@ -669,7 +747,6 @@
                 }
                 // Espacio para escribir espacio (no hacer nada especial)
                 if (e.key === ' ') {
-                    // Permitir que el espacio se escriba normalmente
                     return;
                 }
             }
