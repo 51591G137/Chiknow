@@ -104,18 +104,37 @@ def bd_local_a_render():
         backup_file = f"backups/render_backup_pre_upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
         
         print("   Conectando a Render...")
-        with open(backup_file, 'w', encoding='utf-8') as f:
-            subprocess.run(
+        try:
+            result = subprocess.run(
                 ["pg_dump", render_url],
-                stdout=f,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                check=True,
+                check=False,
                 encoding='utf-8'
             )
-        
-        backup_size = os.path.getsize(backup_file) / 1024 / 1024  # MB
-        print(f"✅ Backup guardado: {backup_file} ({backup_size:.2f} MB)")
-        print("   ⚠️  GUARDA ESTE ARCHIVO. Es tu única forma de recuperar datos.")
+            
+            if result.returncode != 0:
+                print(f"⚠️  Error en pg_dump: {result.stderr}")
+                print("\n❓ ¿Continuar sin backup de producción? (MUY PELIGROSO)")
+                continuar = input("Escribe 'SI SIN BACKUP' para continuar: ")
+                if continuar != "SI SIN BACKUP":
+                    print("\n✅ Operación cancelada")
+                    return False
+                print("\n⚠️  Continuando SIN backup de producción...")
+            else:
+                with open(backup_file, 'w', encoding='utf-8') as f:
+                    f.write(result.stdout)
+                
+                backup_size = os.path.getsize(backup_file) / 1024 / 1024  # MB
+                print(f"✅ Backup guardado: {backup_file} ({backup_size:.2f} MB)")
+                print("   ⚠️  GUARDA ESTE ARCHIVO. Es tu única forma de recuperar datos.")
+        except Exception as e:
+            print(f"⚠️  No se pudo hacer backup: {e}")
+            print("\n❓ ¿Continuar sin backup? (MUY PELIGROSO)")
+            continuar = input("Escribe 'SI SIN BACKUP' para continuar: ")
+            if continuar != "SI SIN BACKUP":
+                print("\n✅ Operación cancelada")
+                return False
         
         # Paso 2: Copiar test.db como backup
         print("\n💾 Paso 2: Backup de data/test.db local...")
@@ -131,41 +150,51 @@ def bd_local_a_render():
         engine_prod = create_engine(render_url)
         
         with engine_prod.connect() as conn:
-            # Desactivar foreign keys temporalmente
-            conn.execute(text("SET session_replication_role = 'replica';"))
+            # NO necesitamos desactivar foreign keys si borramos en el orden correcto
+            # Orden inverso a las dependencias (de hijos a padres)
             
-            # Borrar en orden (por dependencias)
             tables_to_clear = [
-                "sm2_reviews",
-                "sm2_progress",
-                "sm2_sessions",
-                "ejemplo_activacion",
-                "ejemplo_jerarquia",
-                "hsk_ejemplo",
-                "tarjetas",
-                "ejemplos",
-                "notas",
-                "diccionario",
-                "hsk"
+                # 1. Primero las tablas que dependen de otras
+                ("sm2_reviews", "SM2 Reviews"),
+                ("sm2_progress", "SM2 Progress"),
+                ("sm2_sessions", "SM2 Sessions"),
+                ("ejemplo_activacion", "Activación de Ejemplos"),
+                ("ejemplo_jerarquia", "Jerarquía de Ejemplos"),
+                ("hsk_ejemplo", "Relaciones HSK-Ejemplo"),
+                ("tarjetas", "Tarjetas"),
+                ("notas", "Notas"),
+                # 2. Luego las tablas base
+                ("ejemplos", "Ejemplos"),
+                ("diccionario", "Diccionario"),
+                ("hsk", "HSK")
             ]
             
-            for table in tables_to_clear:
+            total_deleted = 0
+            for table, nombre in tables_to_clear:
                 try:
                     result = conn.execute(text(f"DELETE FROM {table}"))
-                    print(f"   ✅ {table}: {result.rowcount} registros eliminados")
+                    count = result.rowcount
+                    total_deleted += count
+                    if count > 0:
+                        print(f"   ✅ {nombre}: {count} registros eliminados")
+                    else:
+                        print(f"   ℹ️  {nombre}: vacía")
+                    conn.commit()
                 except Exception as e:
-                    print(f"   ⚠️  {table}: {e}")
+                    print(f"   ⚠️  {nombre}: {str(e)[:100]}")
+                    conn.rollback()
+                    # Continuar con la siguiente tabla
             
-            conn.commit()
-            
-            # Reactivar foreign keys
-            conn.execute(text("SET session_replication_role = 'origin';"))
-            conn.commit()
+            print(f"\n   📊 Total eliminados: {total_deleted} registros")
         
         print("✅ Base de datos de producción limpiada")
         
         # Paso 4: Copiar datos de local a producción
         print("\n📥 Paso 4: Subiendo datos locales a producción...")
+        
+        # IMPORTANTE: Configurar entorno antes de importar
+        os.environ["DB_ENVIRONMENT"] = "local"
+        os.environ["DATABASE_URL_LOCAL"] = "sqlite:///./data/test.db"
         
         # Conectar a local
         from sqlalchemy import create_engine as create_eng
