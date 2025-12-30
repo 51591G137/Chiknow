@@ -1,21 +1,28 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, DateTime, Text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, DateTime, Text, CheckConstraint, Index
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
+created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 from .database import Base
 
 class HSK(Base):
     __tablename__ = "hsk"
+    
     id = Column(Integer, primary_key=True, index=True)
-    numero = Column(Integer)
-    nivel = Column(Integer)
-    hanzi = Column(String)
-    pinyin = Column(String)
-    espanol = Column(String)
+    numero = Column(Integer, index=True)  # ✅ Índice para ordenamiento
+    nivel = Column(Integer, index=True)   # ✅ Índice para filtros
+    hanzi = Column(String, index=True)    # ✅ Índice para búsquedas
+    pinyin = Column(String, index=True)   # ✅ Índice para búsquedas
+    espanol = Column(String, index=True)  # ✅ Índice para búsquedas
     hanzi_alt = Column(String, nullable=True)
     pinyin_alt = Column(String, nullable=True)
     categoria = Column(String, nullable=True)  # NUEVO
     ejemplo = Column(Text, nullable=True)  # NUEVO
     significado_ejemplo = Column(Text, nullable=True)  # NUEVO
+
+    __table_args__ = (
+        CheckConstraint('nivel >= 1 AND nivel <= 6', name='check_nivel_valido'),
+        Index('idx_hanzi_nivel', 'hanzi', 'nivel'),  # Índice compuesto
+    )
 
 class Notas(Base):
     """

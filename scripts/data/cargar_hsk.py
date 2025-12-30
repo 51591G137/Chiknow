@@ -23,8 +23,8 @@ import re
 # Añadir el directorio raíz al path para poder importar los módulos
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database import SessionLocal, engine, Base
-import models
+from app.database import SessionLocal, engine, Base
+import app.models as models
 
 def normalizar_nombre_columna(nombre):
     """
@@ -248,7 +248,7 @@ def main():
     
     # Buscar el archivo en múltiples ubicaciones
     posibles_rutas = [
-        "datos/hsk.csv",
+        "data/hsk.csv",
         "../datos/hsk.csv",
         "hsk.csv",
         "datos.csv"

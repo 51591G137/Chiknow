@@ -92,7 +92,7 @@ def render_a_bd_local():
         
         # Asegurar que estamos en modo local
         os.environ["DB_ENVIRONMENT"] = "local"
-        os.environ["DATABASE_URL_LOCAL"] = f"sqlite:///./data/test.db"
+        os.environ["DATABASE_URL_LOCAL"] = "sqlite:///./data/test.db"
         print(f"   ✅ Entorno configurado: {os.environ['DATABASE_URL_LOCAL']}")
         
         # AHORA SÍ importar (usará la configuración correcta)

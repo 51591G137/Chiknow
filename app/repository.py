@@ -1,9 +1,12 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
+created_at = datetime.now(timezone.utc)
 from . import models  # <- IMPORTACIÓN RELATIVA
 import json
 import random
+import unicodedata
+
 
 # ============================================================================
 # FUNCIONES HSK
@@ -15,16 +18,47 @@ def get_hsk_all(db: Session):
 def get_hsk_by_id(db: Session, hsk_id: int):
     return db.query(models.HSK).filter(models.HSK.id == hsk_id).first()
 
+def normalize_text(text: str) -> str:
+    """Normaliza texto removiendo acentos"""
+    if not text:
+        return ""
+    # NFD = Decompose, Mn = Nonspacing marks (acentos)
+    nfd = unicodedata.normalize('NFD', text)
+    return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+
 def search_hsk(db: Session, query: str):
-    """Busca en HSK por hanzi, pinyin o español"""
+    """Busca en HSK por hanzi, pinyin o español (normaliza acentos)"""
+    if not query or not query.strip():
+        return []
+    
+    # Función helper para normalizar texto (quitar acentos)
+    def normalize(text):
+        if not text:
+            return ""
+        nfd = unicodedata.normalize('NFD', text)
+        return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+    
     search_pattern = f"%{query}%"
-    return db.query(models.HSK).filter(
+    query_normalized = normalize(query.lower())
+    
+    # Primero buscar exacto en todos los campos
+    results = db.query(models.HSK).filter(
         or_(
             models.HSK.hanzi.like(search_pattern),
             models.HSK.pinyin.like(search_pattern),
             models.HSK.espanol.like(search_pattern)
         )
     ).all()
+    
+    # Si no hay resultados Y la query tiene letras, buscar normalizando pinyin
+    if not results and query_normalized and any(c.isalpha() for c in query_normalized):
+        all_words = db.query(models.HSK).all()
+        results = [
+            word for word in all_words
+            if word.pinyin and query_normalized in normalize(word.pinyin.lower())
+        ]
+    
+    return results
 
 # ============================================================================
 # FUNCIONES NOTAS
@@ -41,7 +75,7 @@ def create_or_update_nota(db: Session, hsk_id: int, nota_texto: str):
     if nota_existente:
         # Actualizar
         nota_existente.nota = nota_texto
-        nota_existente.updated_at = datetime.utcnow()
+        nota_existente.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(nota_existente)
         return nota_existente
@@ -328,7 +362,7 @@ def update_sm2_session(db: Session, session_id: int, estudiadas: int, correctas:
         session.tarjetas_estudiadas = estudiadas
         session.tarjetas_correctas = correctas
         session.tarjetas_incorrectas = incorrectas
-        session.fecha_fin = datetime.utcnow()
+        session.fecha_fin = datetime.now(timezone.utc)
         db.commit()
         db.refresh(session)
     return session
@@ -364,7 +398,7 @@ def update_progress(db: Session, tarjeta_id: int, easiness: float, repetitions: 
     progress.interval = interval
     progress.next_review = next_review
     progress.estado = estado
-    progress.last_review = datetime.utcnow()
+    progress.last_review = datetime.now(timezone.utc)
     db.commit()
     return progress
 
@@ -389,7 +423,7 @@ def get_cards_due_for_review(db: Session, limite: int = None):
         models.Tarjeta.activa == True
     ).filter(
         or_(
-            models.SM2Progress.next_review <= datetime.utcnow(),
+            models.SM2Progress.next_review <= datetime.now(timezone.utc),
             models.SM2Progress.next_review == None
         )
     ).all()
@@ -481,7 +515,7 @@ def get_sm2_statistics(db: Session):
     total_cards = db.query(models.Tarjeta).filter(models.Tarjeta.activa == True).count()
     cards_with_progress = db.query(models.SM2Progress).count()
     cards_due = db.query(models.SM2Progress).filter(
-        models.SM2Progress.next_review <= datetime.utcnow()
+        models.SM2Progress.next_review <= datetime.now(timezone.utc)
     ).count()
     total_reviews = db.query(models.SM2Review).count()
     

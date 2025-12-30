@@ -243,44 +243,61 @@
         }
 
         async function iniciarEstudio() {
-            console.log('📚 Iniciando estudio...');
-            try {
-                const response = await fetch('/api/sm2/session/start', { method: 'POST' });
-                console.log('🎯 Respuesta sesión:', response.status);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log('🎯 Session data:', data);
-                sessionId = data.session_id;
-                
-                const cardsResponse = await fetch('/api/sm2/cards/due?limite=20');
-                if (!cardsResponse.ok) throw new Error(`HTTP ${cardsResponse.status}`);
-                
-                tarjetasEstudio = await cardsResponse.json();
-                console.log(`🃏 ${tarjetasEstudio.length} tarjetas`);
-                
-                if (tarjetasEstudio.length === 0) {
-                    mostrarNotificacion('No hay tarjetas pendientes', 'info');
-                    return;
-                }
-                
-                indiceActual = 0;
-                tarjetasCompletadas = 0;
-                
-                document.getElementById('area-inicial').style.display = 'none';
-                document.getElementById('area-estudio').style.display = 'block';
-                
-                mostrarTarjeta();
-                console.log('✅ Sesión iniciada');
-            } catch (error) {
-                console.error('❌ Error:', error);
-                mostrarNotificacion('Error: ' + error.message, 'error');
+        console.log('📚 Iniciando estudio...');
+        mostrarLoading('Iniciando sesión...');
+        
+        try {
+            const response = await fetchWithRetry('/api/sm2/session/start', {
+                method: 'POST'
+            }, 3, 10000);
+            
+            console.log('🎯 Respuesta sesión:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            const data = await response.json();
+            console.log('🎯 Session data:', data);
+            sessionId = data.session_id;
+            
+            mostrarLoading('Cargando tarjetas...');
+            
+            const cardsResponse = await fetchWithRetry('/api/sm2/cards/due?limite=20', {}, 3, 10000);
+            
+            if (!cardsResponse.ok) throw new Error(`HTTP ${cardsResponse.status}`);
+            
+            tarjetasEstudio = await cardsResponse.json();
+            console.log(`🃏 ${tarjetasEstudio.length} tarjetas`);
+            
+            if (tarjetasEstudio.length === 0) {
+                ocultarLoading();
+                mostrarNotificacion('No hay tarjetas pendientes', 'info');
+                return;
+            }
+            
+            indiceActual = 0;
+            tarjetasCompletadas = 0;
+            
+            document.getElementById('area-inicial').style.display = 'none';
+            document.getElementById('area-estudio').style.display = 'block';
+            
+            ocultarLoading();
+            mostrarTarjeta();
+            console.log('✅ Sesión iniciada');
+            
+        } catch (error) {
+            console.error('❌ Error:', error);
+            ocultarLoading();
+            
+            if (error.message === 'TimeoutError') {
+                mostrarNotificacion('Tiempo de espera agotado. Verifica tu conexión.', 'error');
+            } else {
+                mostrarNotificacion('Error al iniciar: ' + error.message, 'error');
             }
         }
+    }
 
         function mostrarTarjeta() {
             if (indiceActual >= tarjetasEstudio.length) {

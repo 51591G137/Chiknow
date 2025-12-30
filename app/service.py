@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
+created_at = datetime.now(timezone.utc) 
 from . import repository
 from . import models
 import json
@@ -645,7 +646,7 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
     )
     
     # Calcular fecha de próxima revisión
-    next_review = datetime.utcnow() + timedelta(days=new_interval)
+    next_review = datetime.now(timezone.utc) + timedelta(days=new_interval)
     
     # Actualizar progreso
     repository.update_progress(db, tarjeta_id, new_easiness, new_repetitions, 
