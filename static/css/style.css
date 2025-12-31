@@ -52,6 +52,27 @@ header h1 {
     font-size: 0.95rem;
 }
 
+/* Clases de visibilidad condicional */
+.mobile-only {
+    display: none;
+}
+
+.desktop-only {
+    display: block;
+}
+
+/* Título del header para móvil */
+.header-title {
+    font-size: 2.5rem;
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
 /* ============================================================================
    CONTENIDO PÁGINAS REGULARES (HSK, Diccionario, Tarjetas, Ejemplos)
    ============================================================================ */
@@ -774,10 +795,10 @@ header h1 {
    PÁGINA SM2 (Estudio)
    ============================================================================ */
 
-/* Estadísticas SM2 */
+/* Estadísticas SM2 - Vista escritorio (3 columnas) */
 .stats-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     margin: 2rem 0;
 }
@@ -809,6 +830,25 @@ header h1 {
     color: #64748b;
     font-size: 0.9rem;
     font-weight: 500;
+}
+
+/* Tarjeta de información solo para móvil */
+.info-card {
+    background: linear-gradient(135deg, #e0f2fe, #f0f9ff);
+    border-color: #0ea5e9;
+}
+
+.info-card .stat-label {
+    color: #0369a1;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.info-card .small-text {
+    font-size: 0.95rem;
+    font-weight: normal;
+    line-height: 1.4;
+    color: #475569;
 }
 
 /* Área de estudio SM2 */
@@ -1026,6 +1066,74 @@ header h1 {
     display: inline-block;
     margin-bottom: 1rem;
     font-weight: 600;
+}
+
+/* Botones flotantes para móvil */
+.floating-buttons {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.floating-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.floating-btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.floating-btn-secondary {
+    background: var(--secondary);
+    color: white;
+}
+
+.floating-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.floating-btn:active {
+    transform: translateY(-2px);
+}
+
+/* Tooltip para botones flotantes */
+.floating-btn::after {
+    content: attr(title);
+    position: absolute;
+    right: 70px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.floating-btn:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* ============================================================================
@@ -1434,6 +1542,36 @@ header h1 {
         padding: 15px 15px 80px 15px;
     }
     
+    /* Mostrar/ocultar elementos según dispositivo */
+    .mobile-only {
+        display: block;
+    }
+    
+    .desktop-only {
+        display: none;
+    }
+    
+    /* Header ajustado */
+    header {
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+        margin-bottom: 4px;
+    }
+    
+    .header-title {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+    
+    /* Cards regulares */
     .card {
         padding: 16px;
         flex-direction: column;
@@ -1461,10 +1599,6 @@ header h1 {
         font-size: 1.8rem;
     }
     
-    header h1 {
-        font-size: 2rem;
-    }
-    
     .search-and-filters {
         width: 100%;
     }
@@ -1479,41 +1613,46 @@ header h1 {
         font-size: 0.85rem;
     }
     
+    /* Grid 2x2 para estadísticas SM2 en móvil */
     .stats-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin: 1.5rem 0;
     }
     
-    .tarjeta-grupo-header {
-        flex-direction: column;
-        align-items: flex-start;
+    /* La tarjeta de información ocupa toda la fila */
+    .info-card {
+        grid-column: span 2;
     }
     
-    .tarjeta-item {
-        flex-direction: column;
-        align-items: flex-start;
+    .info-card .stat-label {
+        font-size: 1rem;
     }
     
-    .tarjeta-content {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
+    .info-card .small-text {
+        font-size: 0.85rem;
+        padding: 0 0.5rem;
     }
     
-    .notification, .notificacion {
-        left: 20px;
-        right: 20px;
-        max-width: none;
+    .stat-card {
+        padding: 1rem;
     }
     
-    .btn-large {
-        width: 100%;
-    }
-
-    .initial-buttons-container {
-        max-width: 100%;
+    .stat-value {
+        font-size: 2rem;
     }
     
-    /* Responsive para SM2 */
+    .stat-label {
+        font-size: 0.8rem;
+    }
+    
+    /* Área de estudio ajustada */
+    .study-area {
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    /* Flashcard ajustada para móvil */
     .flashcard {
         padding: 1.5rem;
         min-height: 250px;
@@ -1531,9 +1670,11 @@ header h1 {
         font-size: 2rem;
     }
     
+    /* Botones SM2 en columna para móvil */
     .sm2-buttons {
         grid-template-columns: 1fr;
         gap: 0.5rem;
+        max-width: 100%;
     }
     
     .sm2-btn {
@@ -1544,15 +1685,131 @@ header h1 {
         width: 50px;
         height: 50px;
         font-size: 1.5rem;
+        margin-bottom: 0.5rem;
     }
 
+    /* Ajustes de comparación de respuestas */
+    .comparacion-respuestas {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Ajuste de info-palabra-completa */
+    .info-palabra-items {
+        gap: 0.75rem;
+    }
+    
     .info-item {
         flex-direction: column;
         align-items: flex-start;
+        padding: 0.5rem;
     }
-
+    
     .info-label {
         min-width: auto;
+        font-size: 0.8rem;
+    }
+    
+    /* Botones de acción ajustados */
+    .acciones-respuesta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .acciones-respuesta .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Modal ajustado */
+    .modal-content {
+        padding: 1rem;
+        max-height: 90vh;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+    
+    .stat-item-detail {
+        padding: 0.75rem;
+    }
+    
+    .stat-item-detail strong {
+        font-size: 1.5rem;
+    }
+    
+    /* Ajuste del input de respuesta */
+    .respuesta-usuario-container {
+        margin: 1rem 0;
+    }
+    
+    .respuesta-usuario-input {
+        padding: 0.75rem;
+        font-size: 1rem;
+    }
+    
+    /* Navegación inferior ajustada */
+    .bottom-nav {
+        padding: 10px 0;
+    }
+    
+    .nav-item {
+        min-width: 60px;
+        padding: 8px 12px;
+    }
+    
+    .nav-icon {
+        font-size: 1.3rem;
+    }
+    
+    .nav-label {
+        font-size: 0.7rem;
+    }
+    
+    /* Botones flotantes ajustados */
+    .floating-buttons {
+        bottom: 90px;
+        right: 15px;
+    }
+    
+    .floating-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.3rem;
+    }
+    
+    /* Tarjetas grupos */
+    .tarjeta-grupo-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tarjeta-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tarjeta-content {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    
+    /* Notificaciones */
+    .notification, .notificacion {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+    }
+    
+    /* Botones grandes */
+    .btn-large {
+        width: 100%;
+    }
+
+    .initial-buttons-container {
+        max-width: 100%;
     }
     
     /* Responsive para Ejemplos */
@@ -1582,5 +1839,67 @@ header h1 {
     .tab-btn {
         white-space: nowrap;
         padding: 10px 16px;
+    }
+}
+
+/* Ajustes para pantallas muy pequeñas */
+@media (max-width: 360px) {
+    .header-title {
+        font-size: 1.3rem;
+    }
+    
+    .stats-container {
+        gap: 0.5rem;
+    }
+    
+    .stat-card {
+        padding: 0.75rem;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+    }
+    
+    .stat-label {
+        font-size: 0.7rem;
+    }
+    
+    .floating-buttons {
+        bottom: 85px;
+        right: 10px;
+    }
+    
+    .floating-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+    }
+}
+
+/* Mantener vista de escritorio para pantallas grandes */
+@media (min-width: 769px) {
+    .header-title {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .header-title .mobile-only {
+        display: none;
+    }
+    
+    .floating-buttons {
+        display: none;
+    }
+    
+    /* En escritorio, el stats-container debe tener 3 columnas */
+    .stats-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    /* En escritorio, el info-card no se muestra */
+    .info-card.mobile-only {
+        display: none;
     }
 }

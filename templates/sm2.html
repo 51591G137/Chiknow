@@ -9,8 +9,8 @@
 <body>
 
     <header>
-        <h1>🧠 Sistema de Estudio SM2</h1>
-        <p class="subtitle">Repaso espaciado inteligente (0-2)</p>
+        <h1 class="header-title">Algoritmo Sm2<span class="mobile-only"> - Repaso espaciado</span></h1>
+        <p class="subtitle desktop-only">Repaso espaciado inteligente (0-2)</p>
     </header>
 
     <main id="content">
@@ -28,6 +28,7 @@
                 <div class="stat-value" id="stat-estudiadas">-</div>
                 <div class="stat-label">Total Estudiadas</div>
             </div>
+            <!-- SOLUCIÓN: Eliminado el cuarto cuadro que mostraba el texto en móvil -->
         </div>
 
         <!-- Área de estudio -->
@@ -39,10 +40,21 @@
                 <button onclick="mostrarEstadisticasDetalladas()" class="btn btn-primary btn-large">
                     📊 Ver Estadísticas
                 </button>
+                <!-- SOLUCIÓN: El texto de ayuda ahora está DENTRO del contenedor de botones en escritorio -->
+                <p class="help-text desktop-only">
+                    Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
+                </p>
             </div>
-            <p class="help-text">
-                Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
-            </p>
+        </div>
+
+        <!-- Botones flotantes para móvil -->
+        <div class="floating-buttons mobile-only">
+            <button onclick="iniciarEstudio()" class="floating-btn floating-btn-primary" title="Iniciar sesión de estudio">
+                📚
+            </button>
+            <button onclick="mostrarEstadisticasDetalladas()" class="floating-btn floating-btn-secondary" title="Ver estadísticas">
+                📊
+            </button>
         </div>
 
         <div id="area-estudio" class="study-area" style="display: none;">
@@ -105,7 +117,7 @@
                         <button onclick="responder(0)" class="sm2-btn sm2-again">
                             <span class="sm2-number">0</span>
                             <span class="sm2-label">Again</span>
-                            <span class="sm2-sublabel">&lt;10min</span>
+                            <span class="sm2-sublabel" id="again-interval">&lt;10min</span>
                         </button>
                         <button onclick="responder(1)" class="sm2-btn sm2-hard">
                             <span class="sm2-number">1</span>
@@ -243,61 +255,47 @@
         }
 
         async function iniciarEstudio() {
-        console.log('📚 Iniciando estudio...');
-        mostrarLoading('Iniciando sesión...');
-        
-        try {
-            const response = await fetchWithRetry('/api/sm2/session/start', {
-                method: 'POST'
-            }, 3, 10000);
-            
-            console.log('🎯 Respuesta sesión:', response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-            
-            const data = await response.json();
-            console.log('🎯 Session data:', data);
-            sessionId = data.session_id;
-            
-            mostrarLoading('Cargando tarjetas...');
-            
-            const cardsResponse = await fetchWithRetry('/api/sm2/cards/due?limite=20', {}, 3, 10000);
-            
-            if (!cardsResponse.ok) throw new Error(`HTTP ${cardsResponse.status}`);
-            
-            tarjetasEstudio = await cardsResponse.json();
-            console.log(`🃏 ${tarjetasEstudio.length} tarjetas`);
-            
-            if (tarjetasEstudio.length === 0) {
-                ocultarLoading();
-                mostrarNotificacion('No hay tarjetas pendientes', 'info');
-                return;
-            }
-            
-            indiceActual = 0;
-            tarjetasCompletadas = 0;
-            
-            document.getElementById('area-inicial').style.display = 'none';
-            document.getElementById('area-estudio').style.display = 'block';
-            
-            ocultarLoading();
-            mostrarTarjeta();
-            console.log('✅ Sesión iniciada');
-            
-        } catch (error) {
-            console.error('❌ Error:', error);
-            ocultarLoading();
-            
-            if (error.message === 'TimeoutError') {
-                mostrarNotificacion('Tiempo de espera agotado. Verifica tu conexión.', 'error');
-            } else {
+            console.log('📚 Iniciando estudio...');
+            try {
+                const response = await fetch('/api/sm2/session/start', { 
+                    method: 'POST' 
+                });
+                console.log('🎯 Respuesta sesión:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('🎯 Session data:', data);
+                sessionId = data.session_id;
+                
+                const cardsResponse = await fetch('/api/sm2/cards/due?limite=20');
+                if (!cardsResponse.ok) throw new Error(`HTTP ${cardsResponse.status}`);
+                
+                tarjetasEstudio = await cardsResponse.json();
+                console.log(`🃏 ${tarjetasEstudio.length} tarjetas`);
+                
+                if (tarjetasEstudio.length === 0) {
+                    mostrarNotificacion('No hay tarjetas pendientes', 'info');
+                    return;
+                }
+                
+                indiceActual = 0;
+                tarjetasCompletadas = 0;
+                
+                document.getElementById('area-inicial').style.display = 'none';
+                document.getElementById('area-estudio').style.display = 'block';
+                
+                mostrarTarjeta();
+                console.log('✅ Sesión iniciada');
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
                 mostrarNotificacion('Error al iniciar: ' + error.message, 'error');
             }
         }
-    }
 
         function mostrarTarjeta() {
             if (indiceActual >= tarjetasEstudio.length) {
