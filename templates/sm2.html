@@ -10,7 +10,7 @@
 
     <header>
         <h1>🧠 Sistema de Estudio SM2</h1>
-        <p class="subtitle">Repaso espaciado inteligente (0-2)</p>
+        <p class="subtitle">Repaso espaciado inteligente</p>
     </header>
 
     <main id="content">
@@ -30,17 +30,25 @@
             </div>
         </div>
 
+        <!-- Help box para móvil -->
+        <div class="help-box-mobile">
+            <div class="help-title">💡 Repaso Inteligente</div>
+            <div class="help-content">
+                Las tarjetas aparecen en el momento óptimo para tu memoria
+            </div>
+        </div>
+
         <!-- Área de estudio -->
         <div id="area-inicial" class="study-area">
             <!-- Para escritorio -->
-         <div class="initial-buttons-container desktop-only">
+            <div class="initial-buttons-container desktop-only">
                 <button onclick="iniciarEstudio()" class="btn btn-primary btn-large">
                     <span style="margin-right: 10px;">📘</span>
                     Iniciar sesión de estudio
-             </button>
-             <button onclick="mostrarEstadisticasDetalladas()" class="btn btn-primary btn-large">
-                  <span style="margin-right: 10px;">📊</span>
-                  Ver Estadísticas
+                </button>
+                <button onclick="mostrarEstadisticasDetalladas()" class="btn btn-primary btn-large">
+                    <span style="margin-right: 10px;">📊</span>
+                    Ver Estadísticas
                 </button>
             </div>
     
@@ -49,7 +57,7 @@
                 Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
             </p>
     
-            <!-- Botones flotantes redondos para móvil -->
+            <!-- Botones flotantes para móvil -->
             <div class="mobile-floating-buttons mobile-only">
                 <button onclick="mostrarEstadisticasDetalladas()" 
                         class="mobile-floating-btn mobile-floating-btn-statistics"
@@ -103,9 +111,7 @@
                     </div>
                     
                     <!-- Información adicional de la palabra -->
-                    <div class="info-palabra-completa" id="info-palabra-completa">
-                        <!-- Se llenará dinámicamente con hanzi, pinyin y español -->
-                    </div>
+                    <div class="info-palabra-completa" id="info-palabra-completa"></div>
                     
                     <!-- Botones de acción para la respuesta -->
                     <div class="acciones-respuesta" id="acciones-respuesta">
@@ -238,23 +244,17 @@
         window.addEventListener('DOMContentLoaded', cargarEstadisticas);
 
         async function cargarEstadisticas() {
-            console.log('📄 Cargando estadísticas...');
             try {
                 const response = await fetch('/api/sm2/statistics');
-                console.log('📊 Respuesta:', response.status);
-                
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const stats = await response.json();
-                console.log('📊 Stats:', stats);
                 
                 document.getElementById('stat-pendientes').textContent = stats.tarjetas_pendientes_hoy || 0;
                 document.getElementById('stat-nuevas').textContent = stats.tarjetas_nuevas || 0;
                 document.getElementById('stat-estudiadas').textContent = stats.tarjetas_estudiadas || 0;
-                
-                console.log('✅ Stats actualizadas');
             } catch (error) {
-                console.error('❌ Error stats:', error);
+                console.error('Error al cargar estadísticas:', error);
                 document.getElementById('stat-pendientes').textContent = '0';
                 document.getElementById('stat-nuevas').textContent = '0';
                 document.getElementById('stat-estudiadas').textContent = '0';
@@ -262,12 +262,11 @@
         }
 
         async function iniciarEstudio() {
-            console.log('📚 Iniciando estudio...');
             try {
+                // Iniciar sesión
                 const response = await fetch('/api/sm2/session/start', { 
                     method: 'POST' 
                 });
-                console.log('🎯 Respuesta sesión:', response.status);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -275,19 +274,25 @@
                 }
                 
                 const data = await response.json();
-                console.log('🎯 Session data:', data);
                 sessionId = data.session_id;
                 
+                // Obtener tarjetas
                 const cardsResponse = await fetch('/api/sm2/cards/due?limite=20');
                 if (!cardsResponse.ok) throw new Error(`HTTP ${cardsResponse.status}`);
                 
                 tarjetasEstudio = await cardsResponse.json();
-                console.log(`🃏 ${tarjetasEstudio.length} tarjetas`);
                 
-                if (tarjetasEstudio.length === 0) {
-                    mostrarNotificacion('No hay tarjetas pendientes', 'info');
+                // MEJORADO: Informar del número real de tarjetas
+                const numTarjetas = tarjetasEstudio.length;
+                const mensaje = numTarjetas === 0 ? 'No hay tarjetas pendientes' :
+                               `Se estudiarán ${numTarjetas} tarjeta${numTarjetas !== 1 ? 's' : ''}`;
+                
+                if (numTarjetas === 0) {
+                    mostrarNotificacion(mensaje, 'info');
                     return;
                 }
+                
+                mostrarNotificacion(mensaje, 'success');
                 
                 indiceActual = 0;
                 tarjetasCompletadas = 0;
@@ -296,10 +301,9 @@
                 document.getElementById('area-estudio').style.display = 'block';
                 
                 mostrarTarjeta();
-                console.log('✅ Sesión iniciada');
                 
             } catch (error) {
-                console.error('❌ Error:', error);
+                console.error('Error al iniciar estudio:', error);
                 mostrarNotificacion('Error al iniciar: ' + error.message, 'error');
             }
         }
@@ -311,11 +315,10 @@
             }
             
             tarjetaActual = tarjetasEstudio[indiceActual];
-            console.log('🃏 Tarjeta:', tarjetaActual);
             
             let mostradoHTML = '';
             
-            // Si hay audio, agregar botón de audio controlable
+            // Si hay audio, agregar botón
             if (tarjetaActual.audio) {
                 mostradoHTML += `<button class="btn-audio-card" onclick="reproducirAudio('${tarjetaActual.hanzi}')" title="Reproducir audio">🔊</button>`;
             }
@@ -327,7 +330,7 @@
             document.getElementById('card-front').style.display = 'block';
             document.getElementById('card-back').style.display = 'none';
             
-            // Limpiar y enfocar input de respuesta
+            // Limpiar y enfocar input
             const inputRespuesta = document.getElementById('respuesta-usuario');
             inputRespuesta.value = '';
             inputRespuesta.focus();
@@ -336,11 +339,9 @@
         }
 
         function determinarRespuestaEsperada() {
-            // Determinar si la tarjeta espera español o hanzi
             // Tarjetas 1, 2, 3: muestran hanzi/pinyin/audio → esperan español
             // Tarjetas 4, 5, 6: muestran español → esperan hanzi
             
-            // Verificar si mostrado1 contiene el español (tarjetas 4, 5, 6)
             if (tarjetaActual.mostrado1 && tarjetaActual.espanol && 
                 tarjetaActual.mostrado1.includes(tarjetaActual.espanol.split(',')[0].trim())) {
                 return 'hanzi';
@@ -350,16 +351,14 @@
         }
 
         function voltearTarjeta() {
-            // Guardar respuesta del usuario
+            // Guardar respuesta
             respuestaUsuario = document.getElementById('respuesta-usuario').value.trim();
             
-            // Determinar qué tipo de respuesta se espera
             const tipoRespuesta = determinarRespuestaEsperada();
             
-            // Mostrar comparación de respuestas
+            // Mostrar comparación
             document.getElementById('tu-respuesta-texto').textContent = respuestaUsuario || '(sin respuesta)';
             
-            // Determinar respuesta correcta según el tipo
             let respuestaCorrecta;
             if (tipoRespuesta === 'hanzi') {
                 respuestaCorrecta = tarjetaActual.hanzi;
@@ -369,20 +368,16 @@
             
             document.getElementById('respuesta-correcta-texto').textContent = respuestaCorrecta;
             
-            // DETECCIÓN AUTOMÁTICA: Verificar si la respuesta es correcta
+            // DETECCIÓN AUTOMÁTICA de corrección
             const respuestaUsuarioBox = document.querySelector('.respuesta-usuario-box');
-            
-            // Remover clases anteriores
             respuestaUsuarioBox.classList.remove('respuesta-correcta', 'respuesta-incorrecta', 'respuesta-vacia');
             
             if (respuestaUsuario && respuestaCorrecta) {
                 let esCorrecta = false;
                 
                 if (tipoRespuesta === 'hanzi') {
-                    // Comparación exacta para hanzi
                     esCorrecta = respuestaUsuario === respuestaCorrecta;
                 } else {
-                    // Comparación flexible para español (puede tener múltiples traducciones)
                     const respuestasValidas = respuestaCorrecta.split(',').map(r => r.trim().toLowerCase());
                     const respuestaUsuarioLower = respuestaUsuario.toLowerCase();
                     
@@ -402,20 +397,18 @@
                 respuestaUsuarioBox.classList.add('respuesta-vacia');
             }
             
-            // Mostrar información adicional de la palabra
+            // Mostrar info adicional
             mostrarInfoPalabraCompleta(tipoRespuesta);
             
-            // Mostrar u ocultar botón de añadir traducción
+            // Mostrar/ocultar botón de añadir traducción
             const btnAnadirTraduccion = document.getElementById('btn-anadir-traduccion');
             if (tipoRespuesta === 'hanzi') {
-                // Ocultar botón si se espera hanzi
                 btnAnadirTraduccion.style.display = 'none';
             } else {
-                // Mostrar botón si se espera español
                 btnAnadirTraduccion.style.display = 'flex';
             }
             
-            // Voltear tarjeta
+            // Voltear
             document.getElementById('card-front').style.display = 'none';
             document.getElementById('card-back').style.display = 'block';
             
@@ -428,7 +421,7 @@
                 hardDays = 1;
                 easyDays = 1;
             } else if (rep === 1) {
-                hardDays = 4; // 6 * 0.7
+                hardDays = 4;
                 easyDays = 6;
             } else {
                 const currentInterval = tarjetaActual.intervalo || 6;
@@ -441,10 +434,8 @@
         }
 
         function mostrarInfoPalabraCompleta(tipoRespuesta) {
-            // Construir información adicional de la palabra
             let infoHTML = '<div class="info-palabra-items">';
             
-            // Mostrar hanzi, pinyin y español (omitiendo el que ya se mostró como respuesta)
             if (tipoRespuesta !== 'hanzi' && tarjetaActual.hanzi) {
                 infoHTML += `<div class="info-item">
                     <span class="info-label">汉字</span>
@@ -467,13 +458,10 @@
             }
             
             infoHTML += '</div>';
-            
             document.getElementById('info-palabra-completa').innerHTML = infoHTML;
         }
 
         async function responder(calidad) {
-            console.log(`🎯 Calidad: ${calidad}, Respuesta: "${respuestaUsuario}"`);
-            
             if (!sessionId) {
                 mostrarNotificacion('Error: No hay sesión activa', 'error');
                 return;
@@ -487,36 +475,35 @@
                     respuesta_usuario: respuestaUsuario || null
                 };
                 
-                console.log('Enviando:', payload);
-                
                 const response = await fetch('/api/sm2/review', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
-                console.log('📊 Response status:', response.status);
-                
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Error response:', errorText);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const result = await response.json();
-                console.log('✅ Registrado:', result);
                 
                 if (result.error) {
                     throw new Error(result.error);
                 }
                 
-                tarjetasCompletadas++;
-                indiceActual++;
-                respuestaUsuario = ''; // Limpiar para siguiente tarjeta
-                mostrarTarjeta();
+                // MEJORADO: Solo incrementar si fue exitoso
+                if (result.success) {
+                    tarjetasCompletadas++;
+                    indiceActual++;
+                    respuestaUsuario = '';
+                    mostrarTarjeta();
+                } else {
+                    mostrarNotificacion('Error al registrar respuesta', 'error');
+                }
                 
             } catch (error) {
-                console.error('❌ Error completo:', error);
+                console.error('Error al responder:', error);
                 mostrarNotificacion('Error al registrar: ' + error.message, 'error');
             }
         }
@@ -531,13 +518,11 @@
         }
 
         async function finalizarEstudio() {
-            console.log('🎉 Completado');
-            
             if (sessionId) {
                 try {
                     await fetch(`/api/sm2/session/end/${sessionId}`, { method: 'POST' });
                 } catch (error) {
-                    console.error('Error:', error);
+                    console.error('Error al finalizar sesión:', error);
                 }
             }
             
@@ -551,7 +536,15 @@
 
         function reproducirAudio(texto) {
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(texto);
+                // MEJORADO: Cancelar síntesis previa y limpiar texto
+                window.speechSynthesis.cancel();
+                
+                const textoLimpio = texto
+                    .replace(/['"`,;:!?]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                
+                const utterance = new SpeechSynthesisUtterance(textoLimpio);
                 utterance.lang = 'zh-CN';
                 utterance.rate = 0.8;
                 window.speechSynthesis.speak(utterance);
@@ -567,67 +560,47 @@
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
-        // FUNCIÓN: Editar respuesta
         function editarRespuesta() {
-            console.log('✏️ Editando respuesta...');
-            
-            // Volver a la vista frontal
             document.getElementById('card-front').style.display = 'block';
             document.getElementById('card-back').style.display = 'none';
             
-            // Poner el foco en el input y mantener la respuesta anterior
             const inputRespuesta = document.getElementById('respuesta-usuario');
             inputRespuesta.value = respuestaUsuario || '';
             inputRespuesta.focus();
             inputRespuesta.select();
         }
 
-        // NUEVA FUNCIÓN: Actualizar todas las tarjetas en la sesión actual del mismo hsk_id
         function actualizarTarjetasEnSesion(hsk_id, nuevoEspanol) {
-            console.log(`🔄 Actualizando tarjetas para hsk_id ${hsk_id} con nuevo español: ${nuevoEspanol}`);
-            
-            // Actualizar todas las tarjetas en tarjetasEstudio que tengan el mismo hsk_id
             tarjetasEstudio.forEach(tarjeta => {
                 if (tarjeta.hsk_id === hsk_id) {
-                    console.log(`🔍 Actualizando tarjeta ${tarjeta.tarjeta_id}`);
                     tarjeta.requerido = nuevoEspanol;
                     tarjeta.espanol = nuevoEspanol;
                 }
             });
             
-            // También actualizar la tarjeta actual si es la misma
             if (tarjetaActual && tarjetaActual.hsk_id === hsk_id) {
                 tarjetaActual.requerido = nuevoEspanol;
                 tarjetaActual.espanol = nuevoEspanol;
             }
         }
 
-        // FUNCIÓN: Añadir traducción (versión mejorada)
         async function anadirTraduccion() {
-            console.log('➕ Añadiendo traducción...');
-            
-            // Si no hay respuesta, no hacer nada
             if (!respuestaUsuario || respuestaUsuario.trim() === '') {
                 mostrarNotificacion('No hay respuesta para añadir', 'error');
                 return;
             }
             
-            // Si la tarjeta no es de tipo palabra (ej. es un ejemplo), no se puede añadir traducción
             if (tarjetaActual.tipo !== 'palabra') {
                 mostrarNotificacion('Solo se pueden añadir traducciones a palabras individuales', 'error');
                 return;
             }
             
-            // Si no tiene hsk_id, no podemos añadir
             if (!tarjetaActual.hsk_id) {
                 mostrarNotificacion('No se puede añadir traducción a esta tarjeta', 'error');
                 return;
             }
             
             try {
-                console.log(`🔍 Añadiendo traducción "${respuestaUsuario}" a hsk_id ${tarjetaActual.hsk_id}`);
-                
-                // Llamar a la API para añadir traducción
                 const response = await fetch(`/api/hsk/add-traduccion/${tarjetaActual.hsk_id}?traduccion=${encodeURIComponent(respuestaUsuario)}`, {
                     method: 'POST'
                 });
@@ -638,63 +611,52 @@
                 }
                 
                 const result = await response.json();
-                console.log('✅ Resultado añadir traducción:', result);
                 
                 if (result.error) {
                     mostrarNotificacion('Error: ' + result.error, 'error');
                 } else {
                     mostrarNotificacion('✅ Traducción añadida: ' + respuestaUsuario, 'success');
                     
-                    // Actualizar la respuesta correcta mostrada (ahora incluye la nueva)
                     document.getElementById('respuesta-correcta-texto').textContent = result.espanol;
                     
-                    // Marcar la respuesta del usuario como correcta visualmente
                     const respuestaUsuarioBox = document.querySelector('.respuesta-usuario-box');
-                    
                     if (respuestaUsuarioBox) {
                         respuestaUsuarioBox.classList.remove('respuesta-incorrecta', 'respuesta-vacia');
                         respuestaUsuarioBox.classList.add('respuesta-correcta');
                     }
                     
-                    // Actualizar tarjeta actual en memoria con las nuevas traducciones
                     if (tarjetaActual) {
                         tarjetaActual.requerido = result.espanol;
                         tarjetaActual.espanol = result.espanol;
                     }
                     
-                    // Actualizar todas las tarjetas en el array actual que pertenezcan al mismo hsk_id
                     actualizarTarjetasEnSesion(tarjetaActual.hsk_id, result.espanol);
                 }
             } catch (error) {
-                console.error('❌ Error añadiendo traducción:', error);
+                console.error('Error al añadir traducción:', error);
                 mostrarNotificacion('Error al añadir traducción: ' + error.message, 'error');
             }
         }
 
         async function mostrarEstadisticasDetalladas() {
             try {
-                // Cargar estadísticas generales
                 const statsRes = await fetch('/api/sm2/statistics');
                 const stats = await statsRes.json();
                 
-                // Cargar progreso detallado
                 const progressRes = await fetch('/api/sm2/progress');
                 const progress = await progressRes.json();
                 
-                // Actualizar modal
                 document.getElementById('detail-total').textContent = stats.total_tarjetas;
                 document.getElementById('detail-estudiadas').textContent = stats.tarjetas_estudiadas;
                 document.getElementById('detail-nuevas').textContent = stats.tarjetas_nuevas;
                 document.getElementById('detail-pendientes').textContent = stats.tarjetas_pendientes_hoy;
                 document.getElementById('detail-revisiones').textContent = stats.total_revisiones;
                 
-                // Calcular tasa de éxito promedio
                 const totalReviews = progress.reduce((sum, p) => sum + p.total_revisiones, 0);
                 const correctReviews = progress.reduce((sum, p) => sum + p.revisiones_correctas, 0);
                 const tasaExito = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0;
                 document.getElementById('detail-tasa').textContent = `${tasaExito}%`;
                 
-                // Agrupar por estado
                 const porEstado = {};
                 progress.forEach(p => {
                     if (!porEstado[p.estado]) porEstado[p.estado] = 0;
@@ -713,7 +675,6 @@
                 estadosHTML += '</div>';
                 document.getElementById('progreso-estados').innerHTML = estadosHTML;
                 
-                // Mostrar top 10 tarjetas por progreso
                 const top10 = progress
                     .filter(p => p.activa)
                     .sort((a, b) => b.repeticiones - a.repetitions)
@@ -733,7 +694,6 @@
                 nivelesHTML += '</div>';
                 document.getElementById('progreso-niveles').innerHTML = nivelesHTML;
                 
-                // Mostrar modal
                 document.getElementById('modal-stats').classList.add('show');
                 
             } catch (error) {
@@ -759,37 +719,30 @@
             const inputRespuesta = document.getElementById('respuesta-usuario');
             const cardFront = document.getElementById('card-front');
             
-            // Si el input de respuesta está enfocado, manejar teclas específicamente
             if (document.activeElement === inputRespuesta) {
-                // Enter para voltear
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     voltearTarjeta();
                     return;
                 }
-                // Espacio para escribir espacio (no hacer nada especial)
                 if (e.key === ' ') {
                     return;
                 }
             }
             
-            // Solo manejar atajos si NO estamos en el input
             if (document.activeElement !== inputRespuesta) {
                 if (cardFront.style.display !== 'none') {
-                    // En el frontal: Espacio para voltear
                     if (e.key === ' ') {
                         e.preventDefault();
                         voltearTarjeta();
                     }
                 } else {
-                    // En el trasero: Números para responder
                     if (e.key === '0') responder(0);
                     if (e.key === '1') responder(1);
                     if (e.key === '2') responder(2);
                 }
             }
             
-            // ESC para cerrar modal (siempre activo)
             if (e.key === 'Escape') {
                 cerrarEstadisticas();
             }

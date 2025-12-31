@@ -1,8 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from datetime import datetime, timezone, timedelta
-created_at = datetime.now(timezone.utc)
-from . import models  # <- IMPORTACIÓN RELATIVA
+from . import models
 import json
 import random
 import unicodedata
@@ -22,7 +21,6 @@ def normalize_text(text: str) -> str:
     """Normaliza texto removiendo acentos"""
     if not text:
         return ""
-    # NFD = Decompose, Mn = Nonspacing marks (acentos)
     nfd = unicodedata.normalize('NFD', text)
     return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
 
@@ -31,7 +29,6 @@ def search_hsk(db: Session, query: str):
     if not query or not query.strip():
         return []
     
-    # Función helper para normalizar texto (quitar acentos)
     def normalize(text):
         if not text:
             return ""
@@ -73,14 +70,12 @@ def create_or_update_nota(db: Session, hsk_id: int, nota_texto: str):
     nota_existente = get_nota_by_hsk_id(db, hsk_id)
     
     if nota_existente:
-        # Actualizar
         nota_existente.nota = nota_texto
         nota_existente.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(nota_existente)
         return nota_existente
     else:
-        # Crear
         nueva_nota = models.Notas(
             hsk_id=hsk_id,
             nota=nota_texto
@@ -167,7 +162,7 @@ def search_diccionario(db: Session, query: str):
     ).all()
 
 # ============================================================================
-# FUNCIONES TARJETAS
+# FUNCIONES TARJETAS (MEJORADAS)
 # ============================================================================
 
 def create_tarjeta(db: Session, datos_tarjeta: dict):
@@ -177,12 +172,106 @@ def create_tarjeta(db: Session, datos_tarjeta: dict):
     return nueva_tarjeta
 
 def delete_tarjetas_by_diccionario_id(db: Session, diccionario_id: int):
-    """Elimina todas las tarjetas asociadas a una entrada del diccionario"""
-    db.query(models.Tarjeta).filter(models.Tarjeta.diccionario_id == diccionario_id).delete()
+    """
+    Elimina todas las tarjetas asociadas a una entrada del diccionario
+    MEJORADO: Maneja correctamente las dependencias de foreign keys
+    """
+    try:
+        # 1. Obtener todas las tarjetas asociadas
+        tarjetas = db.query(models.Tarjeta).filter(
+            models.Tarjeta.diccionario_id == diccionario_id
+        ).all()
+        
+        if not tarjetas:
+            return True
+        
+        # 2. Para cada tarjeta, eliminar dependencias en orden
+        for tarjeta in tarjetas:
+            # 2a. Eliminar reviews (SM2Review)
+            db.query(models.SM2Review).filter(
+                models.SM2Review.tarjeta_id == tarjeta.id
+            ).delete(synchronize_session=False)
+            
+            # 2b. Eliminar progreso (SM2Progress)
+            db.query(models.SM2Progress).filter(
+                models.SM2Progress.tarjeta_id == tarjeta.id
+            ).delete(synchronize_session=False)
+        
+        # 3. Ahora sí eliminar las tarjetas
+        db.query(models.Tarjeta).filter(
+            models.Tarjeta.diccionario_id == diccionario_id
+        ).delete(synchronize_session=False)
+        
+        # 4. Commit de todos los cambios
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error al eliminar tarjetas: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def delete_tarjetas_by_ejemplo_id(db: Session, ejemplo_id: int):
-    """Elimina todas las tarjetas asociadas a un ejemplo"""
-    db.query(models.Tarjeta).filter(models.Tarjeta.ejemplo_id == ejemplo_id).delete()
+    """
+    Elimina todas las tarjetas asociadas a un ejemplo
+    MEJORADO: Maneja correctamente las dependencias de foreign keys
+    """
+    try:
+        tarjetas = db.query(models.Tarjeta).filter(
+            models.Tarjeta.ejemplo_id == ejemplo_id
+        ).all()
+        
+        if not tarjetas:
+            return True
+        
+        for tarjeta in tarjetas:
+            db.query(models.SM2Review).filter(
+                models.SM2Review.tarjeta_id == tarjeta.id
+            ).delete(synchronize_session=False)
+            
+            db.query(models.SM2Progress).filter(
+                models.SM2Progress.tarjeta_id == tarjeta.id
+            ).delete(synchronize_session=False)
+        
+        db.query(models.Tarjeta).filter(
+            models.Tarjeta.ejemplo_id == ejemplo_id
+        ).delete(synchronize_session=False)
+        
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error al eliminar tarjetas de ejemplo: {e}")
+        return False
+
+def delete_tarjeta_by_id(db: Session, tarjeta_id: int):
+    """
+    Elimina una tarjeta específica con todas sus dependencias
+    NUEVO: Para uso general
+    """
+    try:
+        db.query(models.SM2Review).filter(
+            models.SM2Review.tarjeta_id == tarjeta_id
+        ).delete(synchronize_session=False)
+        
+        db.query(models.SM2Progress).filter(
+            models.SM2Progress.tarjeta_id == tarjeta_id
+        ).delete(synchronize_session=False)
+        
+        db.query(models.Tarjeta).filter(
+            models.Tarjeta.id == tarjeta_id
+        ).delete(synchronize_session=False)
+        
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error al eliminar tarjeta: {e}")
+        return False
 
 def activar_tarjeta(db: Session, tarjeta_id: int):
     """Activa una tarjeta"""
@@ -211,6 +300,59 @@ def get_all_tarjetas_with_info(db: Session):
 def get_tarjetas_count(db: Session):
     """Cuenta el total de tarjetas"""
     return db.query(models.Tarjeta).count()
+
+def limpiar_registros_huerfanos(db: Session):
+    """
+    Limpia registros huérfanos en la base de datos
+    NUEVO: Útil para mantenimiento
+    """
+    try:
+        print("🧹 Iniciando limpieza de registros huérfanos...")
+        
+        # 1. SM2Review sin tarjeta
+        reviews_huerfanas = db.query(models.SM2Review).outerjoin(
+            models.Tarjeta, models.SM2Review.tarjeta_id == models.Tarjeta.id
+        ).filter(models.Tarjeta.id == None).count()
+        
+        if reviews_huerfanas > 0:
+            db.query(models.SM2Review).outerjoin(
+                models.Tarjeta, models.SM2Review.tarjeta_id == models.Tarjeta.id
+            ).filter(models.Tarjeta.id == None).delete(synchronize_session=False)
+            print(f"   ✓ {reviews_huerfanas} reviews huérfanas eliminadas")
+        
+        # 2. SM2Progress sin tarjeta
+        progress_huerfanos = db.query(models.SM2Progress).outerjoin(
+            models.Tarjeta, models.SM2Progress.tarjeta_id == models.Tarjeta.id
+        ).filter(models.Tarjeta.id == None).count()
+        
+        if progress_huerfanos > 0:
+            db.query(models.SM2Progress).outerjoin(
+                models.Tarjeta, models.SM2Progress.tarjeta_id == models.Tarjeta.id
+            ).filter(models.Tarjeta.id == None).delete(synchronize_session=False)
+            print(f"   ✓ {progress_huerfanos} progress huérfanos eliminados")
+        
+        # 3. Tarjetas sin diccionario ni ejemplo
+        tarjetas_huerfanas = db.query(models.Tarjeta).filter(
+            models.Tarjeta.diccionario_id == None,
+            models.Tarjeta.ejemplo_id == None
+        ).count()
+        
+        if tarjetas_huerfanas > 0:
+            for tarjeta in db.query(models.Tarjeta).filter(
+                models.Tarjeta.diccionario_id == None,
+                models.Tarjeta.ejemplo_id == None
+            ).all():
+                delete_tarjeta_by_id(db, tarjeta.id)
+            print(f"   ✓ {tarjetas_huerfanas} tarjetas huérfanas eliminadas")
+        
+        db.commit()
+        print("✅ Limpieza completada")
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error durante limpieza: {e}")
+        return False
 
 # ============================================================================
 # FUNCIONES EJEMPLOS
@@ -255,7 +397,6 @@ def activar_ejemplo(db: Session, ejemplo_id: int, motivo: str, hanzi_ids: list):
         ejemplo.activado = True
         db.commit()
         
-        # Registrar activación
         activacion = models.EjemploActivacion(
             ejemplo_id=ejemplo_id,
             motivo=motivo,
@@ -428,7 +569,7 @@ def get_cards_due_for_review(db: Session, limite: int = None):
         )
     ).all()
     
-    # NUEVO: Mezclar aleatoriamente
+    # Mezclar aleatoriamente
     tarjetas_list = list(query)
     random.shuffle(tarjetas_list)
     

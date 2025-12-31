@@ -7,10 +7,12 @@ Este script:
 3. Si existe, actualiza los datos (UPSERT)
 4. Si no existe, crea un nuevo registro
 
-Esto permite mantener los IDs existentes y actualizar la información sin conflictos.
+Uso desde CUALQUIER directorio:
+    python scripts/data/cargar_hsk.py
+    python cargar_hsk.py  (si estás en scripts/data/)
+    cd /cualquier/ruta && python /ruta/a/chiknow/scripts/data/cargar_hsk.py
 
-NOTA: El script detecta automáticamente las variaciones en nombres de columnas
-(Nivel/nivel, Hànzì/Hanzi, Pīnyīn/Pinyin, etc.)
+NOTA: El script detecta automáticamente las rutas correctas
 """
 
 import sys
@@ -20,80 +22,81 @@ from sqlalchemy.orm import Session
 import unicodedata
 import re
 
-# Añadir el directorio raíz al path para poder importar los módulos
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# ============================================================================
+# CONFIGURACIÓN DE RUTAS ABSOLUTAS
+# ============================================================================
+
+# Obtener directorio del script actual
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Calcular directorio raíz del proyecto (2 niveles arriba: scripts/data/ -> scripts/ -> raíz/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+
+# Añadir raíz del proyecto al path de Python
+sys.path.insert(0, PROJECT_ROOT)
+
+# Cambiar directorio de trabajo al proyecto raíz
+os.chdir(PROJECT_ROOT)
+
+print(f"📁 Directorio del script: {SCRIPT_DIR}")
+print(f"📁 Directorio raíz del proyecto: {PROJECT_ROOT}")
+print(f"📁 Directorio de trabajo actual: {os.getcwd()}")
+
+# ============================================================================
+# IMPORTACIONES (ahora funcionarán desde cualquier ubicación)
+# ============================================================================
 
 from app.database import SessionLocal, engine, Base
 import app.models as models
+
+# ============================================================================
+# FUNCIONES
+# ============================================================================
 
 def normalizar_nombre_columna(nombre):
     """
     Normaliza nombres de columnas para hacerlos comparables
     Elimina TODOS los acentos y marcas diacríticas, convierte a minúsculas
     """
-    # Normalizar a NFD (descomponer caracteres con acentos)
     nombre_nfd = unicodedata.normalize('NFD', nombre)
-    
-    # Filtrar solo caracteres ASCII (elimina todos los acentos y marcas)
     nombre_ascii = ''.join(
         c for c in nombre_nfd 
-        if unicodedata.category(c) != 'Mn'  # Mn = Nonspacing_Mark (acentos, tildes, etc.)
+        if unicodedata.category(c) != 'Mn'
     )
-    
-    # Convertir a minúsculas y eliminar espacios extra
     nombre_limpio = nombre_ascii.lower().strip()
-    
-    # Eliminar guiones bajos y espacios para comparación
     nombre_comparable = re.sub(r'[_\s]+', '', nombre_limpio)
-    
     return nombre_comparable
 
 def mapear_columnas(columnas_csv):
     """
     Crea un mapeo entre nombres de columnas del CSV y nombres estándar
-    
-    Args:
-        columnas_csv: Lista de nombres de columnas del CSV
-    
-    Returns:
-        dict: Mapeo de nombre_estandar -> nombre_en_csv
     """
-    # Definir variaciones posibles para cada columna
-    # La clave es la forma normalizada, el valor es el nombre estándar en la BD
     variaciones = {
         'nivel': 'nivel',
         'level': 'nivel',
-        
         'hanzi': 'hanzi',
-        'hanzi': 'hanzi',  # Con à
+        'hanzi': 'hanzi',
         'caracteres': 'hanzi',
-        
         'pinyin': 'pinyin',
-        'pinyin': 'pinyin',  # Con ī
+        'pinyin': 'pinyin',
         'romanizacion': 'pinyin',
-        
         'español': 'espanol',
         'espanol': 'espanol',
         'spanish': 'espanol',
         'traduccion': 'espanol',
-        
         'hanzialt': 'hanzi_alt',
         'hanzi_alt': 'hanzi_alt',
         'hanzialternativo': 'hanzi_alt',
-        
         'pinyinalt': 'pinyin_alt',
         'pinyin_alt': 'pinyin_alt',
         'pinyinalternativo': 'pinyin_alt',
-        
         'categoria': 'categoria',
         'categoria': 'categoria',
         'category': 'categoria',
         'tipo': 'categoria',
-        
         'ejemplo': 'ejemplo',
         'example': 'ejemplo',
         'sample': 'ejemplo',
-        
         'significadoejemplo': 'significado_ejemplo',
         'significado_ejemplo': 'significado_ejemplo',
         'significado ejemplo': 'significado_ejemplo',
@@ -101,19 +104,16 @@ def mapear_columnas(columnas_csv):
     }
     
     mapeo = {}
-    mapeo_debug = {}  # Para debugging
+    mapeo_debug = {}
     
-    # Para cada columna del CSV
     for col_csv in columnas_csv:
         col_normalizada = normalizar_nombre_columna(col_csv)
         mapeo_debug[col_csv] = col_normalizada
         
-        # Buscar en las variaciones
         if col_normalizada in variaciones:
             nombre_estandar = variaciones[col_normalizada]
             mapeo[nombre_estandar] = col_csv
     
-    # Debug: mostrar normalizaciones
     print(f"\n🔍 Debug - Columnas normalizadas:")
     for original, normalizada in mapeo_debug.items():
         encontrada = "✅" if normalizada in variaciones else "❌"
@@ -121,23 +121,35 @@ def mapear_columnas(columnas_csv):
     
     return mapeo
 
-def cargar_hsk_desde_csv(csv_path: str = "datos/hsk.csv"):
+def cargar_hsk_desde_csv(csv_path: str = None):
     """
     Carga o actualiza datos de HSK desde CSV
     
     Args:
-        csv_path: Ruta al archivo CSV
+        csv_path: Ruta al archivo CSV (si None, usa ruta por defecto)
     """
+    # Si no se proporciona ruta, usar ruta por defecto
+    if csv_path is None:
+        csv_path = os.path.join(PROJECT_ROOT, "data", "hsk.csv")
+    
+    # Verificar que el archivo existe
+    if not os.path.exists(csv_path):
+        print(f"❌ Error: No se encontró el archivo {csv_path}")
+        return False
+    
     # Crear tablas si no existen
     Base.metadata.create_all(bind=engine)
     
     # Leer CSV
-    print(f"📖 Leyendo {csv_path}...")
+    print(f"\n📖 Leyendo {csv_path}...")
     try:
         df = pd.read_csv(csv_path)
     except FileNotFoundError:
         print(f"❌ Error: No se encontró el archivo {csv_path}")
-        return
+        return False
+    except Exception as e:
+        print(f"❌ Error al leer CSV: {e}")
+        return False
     
     print(f"✅ Leídas {len(df)} filas del CSV")
     
@@ -158,12 +170,7 @@ def cargar_hsk_desde_csv(csv_path: str = "datos/hsk.csv"):
     if columnas_faltantes:
         print(f"\n❌ Error: No se pudieron mapear las columnas requeridas: {columnas_faltantes}")
         print(f"\nColumnas disponibles en el mapeo: {list(mapeo.keys())}")
-        print(f"\nPor favor verifica que el CSV contenga columnas equivalentes a:")
-        print(f"   - Nivel (o level)")
-        print(f"   - Hanzi (o Hànzì, caracteres)")
-        print(f"   - Pinyin (o Pīnyīn, romanizacion)")
-        print(f"   - Español (o espanol, spanish, traduccion)")
-        return
+        return False
     
     print(f"\n✅ Todas las columnas requeridas están presentes\n")
     
@@ -174,13 +181,13 @@ def cargar_hsk_desde_csv(csv_path: str = "datos/hsk.csv"):
         registros_actualizados = 0
         
         for idx, row in df.iterrows():
-            # Generar ID basado en el índice (número de fila + 1)
+            # Generar ID basado en el índice
             hsk_id = idx + 1
             
             # Buscar si existe el registro
             existing = db.query(models.HSK).filter(models.HSK.id == hsk_id).first()
             
-            # Preparar datos usando el mapeo
+            # Preparar datos
             datos = {
                 'id': hsk_id,
                 'numero': hsk_id,
@@ -196,7 +203,7 @@ def cargar_hsk_desde_csv(csv_path: str = "datos/hsk.csv"):
                 else:
                     datos[campo_estandar] = str(valor).strip() if pd.notna(valor) else ''
             
-            # Añadir campos opcionales si existen en el mapeo
+            # Añadir campos opcionales
             for campo_opcional in ['hanzi_alt', 'pinyin_alt', 'categoria', 'ejemplo', 'significado_ejemplo']:
                 if campo_opcional in mapeo:
                     col_csv = mapeo[campo_opcional]
@@ -204,16 +211,16 @@ def cargar_hsk_desde_csv(csv_path: str = "datos/hsk.csv"):
                     datos[campo_opcional] = str(valor).strip() if pd.notna(valor) else None
             
             if existing:
-                # ACTUALIZAR registro existente
+                # ACTUALIZAR
                 for key, value in datos.items():
-                    if key != 'id':  # No actualizar el ID
+                    if key != 'id':
                         setattr(existing, key, value)
                 registros_actualizados += 1
                 
                 if (registros_actualizados % 100 == 0):
                     print(f"   Actualizados: {registros_actualizados}")
             else:
-                # CREAR nuevo registro
+                # CREAR
                 nuevo_registro = models.HSK(**datos)
                 db.add(nuevo_registro)
                 registros_nuevos += 1
@@ -231,12 +238,14 @@ def cargar_hsk_desde_csv(csv_path: str = "datos/hsk.csv"):
         print(f"📈 Total en BD: {db.query(models.HSK).count()}")
         print("="*50)
         
+        return True
+        
     except Exception as e:
         db.rollback()
         print(f"\n❌ Error durante la importación: {e}")
         import traceback
         traceback.print_exc()
-        raise
+        return False
     finally:
         db.close()
 
@@ -248,8 +257,8 @@ def main():
     
     # Buscar el archivo en múltiples ubicaciones
     posibles_rutas = [
-        "data/hsk.csv",
-        "../datos/hsk.csv",
+        os.path.join(PROJECT_ROOT, "data", "hsk.csv"),
+        os.path.join(PROJECT_ROOT, "datos", "hsk.csv"),
         "hsk.csv",
         "datos.csv"
     ]
@@ -265,9 +274,11 @@ def main():
         print("Ubicaciones buscadas:")
         for ruta in posibles_rutas:
             print(f"  - {os.path.abspath(ruta)}")
-        return
+        return False
     
-    cargar_hsk_desde_csv(csv_path)
+    print(f"✅ Archivo encontrado: {csv_path}\n")
+    return cargar_hsk_desde_csv(csv_path)
 
 if __name__ == "__main__":
-    main()
+    success = main()
+    sys.exit(0 if success else 1)

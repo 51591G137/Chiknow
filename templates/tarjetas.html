@@ -27,26 +27,26 @@
     </main>
 
     <nav class="bottom-nav">
-    <a href="/" class="nav-item">
-        <span class="nav-icon">3.0</span>
-        <span class="nav-label">HSK</span>
-    </a>
-    <a href="/diccionario" class="nav-item">
-        <span class="nav-icon">📖</span>
-        <span class="nav-label">Diccionario</span>
-    </a>
-    <a href="/ejemplos" class="nav-item">
-        <span>💬</span>
-        <span class="nav-label">Ejemplos</span>
-    </a>
-    <a href="/tarjetas" class="nav-item active">
-        <span>🗂️</span>
-        <span class="nav-label">Tarjetas</span>
-    </a>
-    <a href="/sm2" class="nav-item">
-        <span>🧠</span>
-        <span class="nav-label">Estudiar</span>
-    </a>
+        <a href="/" class="nav-item">
+            <span class="nav-icon">3.0</span>
+            <span class="nav-label">HSK</span>
+        </a>
+        <a href="/diccionario" class="nav-item">
+            <span class="nav-icon">📖</span>
+            <span class="nav-label">Diccionario</span>
+        </a>
+        <a href="/ejemplos" class="nav-item">
+            <span>💬</span>
+            <span class="nav-label">Ejemplos</span>
+        </a>
+        <a href="/tarjetas" class="nav-item active">
+            <span>🗂️</span>
+            <span class="nav-label">Tarjetas</span>
+        </a>
+        <a href="/sm2" class="nav-item">
+            <span>🧠</span>
+            <span class="nav-label">Estudiar</span>
+        </a>
     </nav>
 
     <script>
@@ -94,23 +94,7 @@
                                 <span class="tarjetas-badge">${grupo.length} tarjetas</span>
                             </div>
                             <div class="tarjeta-grupo-items">
-                                ${grupo.map((t, idx) => `
-                                    <div class="tarjeta-item">
-                                        <div class="tarjeta-numero">#${idx + 1}</div>
-                                        <div class="tarjeta-content">
-                                            <div class="tarjeta-pregunta">
-                                                ${t.mostrado1 ? `<span class="mostrado">${t.mostrado1}</span>` : ''}
-                                                ${t.mostrado2 ? `<span class="mostrado secondary">${t.mostrado2}</span>` : ''}
-                                                ${t.audio ? '<span class="audio-icon">🔊</span>' : ''}
-                                                ${!t.mostrado1 && !t.mostrado2 && t.audio ? '<span class="solo-audio">Solo Audio</span>' : ''}
-                                            </div>
-                                            <div class="tarjeta-respuesta">
-                                                <span class="arrow">→</span>
-                                                <span class="requerido">${t.requerido}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
+                                ${grupo.map((t, idx) => renderizarTarjeta(t, idx)).join('')}
                             </div>
                         </div>
                     `;
@@ -120,6 +104,43 @@
                 document.getElementById('lista-tarjetas').innerHTML = 
                     '<p class="error-message">Error al cargar las tarjetas.</p>';
             }
+        }
+
+        function renderizarTarjeta(tarjeta, indice) {
+            // Determinar qué se muestra y qué se requiere
+            let preguntaHTML = '';
+            
+            if (tarjeta.mostrado1) {
+                preguntaHTML += `<span class="mostrado">${tarjeta.mostrado1}</span>`;
+            }
+            
+            if (tarjeta.mostrado2) {
+                preguntaHTML += `<span class="mostrado secondary">${tarjeta.mostrado2}</span>`;
+            }
+            
+            if (tarjeta.audio) {
+                preguntaHTML += '<span class="audio-icon">🔊</span>';
+            }
+            
+            // Si no hay nada visual, es solo audio
+            if (!tarjeta.mostrado1 && !tarjeta.mostrado2 && tarjeta.audio) {
+                preguntaHTML = '<span class="solo-audio">Solo Audio</span>';
+            }
+            
+            return `
+                <div class="tarjeta-item">
+                    <div class="tarjeta-numero">#${indice + 1}</div>
+                    <div class="tarjeta-content">
+                        <div class="tarjeta-pregunta">
+                            ${preguntaHTML}
+                        </div>
+                        <div class="tarjeta-respuesta">
+                            <span class="arrow">→</span>
+                            <span class="requerido">${tarjeta.requerido}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         function agruparPorPalabra(tarjetas) {
@@ -134,5 +155,187 @@
 
         window.onload = cargarTarjetas;
     </script>
+
+    <style>
+        /* Estilos específicos mejorados para tarjetas */
+        .tarjeta-grupo {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .tarjeta-grupo-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .tarjeta-grupo-header .hanzi-lg {
+            font-size: 2.5rem;
+            min-width: auto;
+        }
+
+        .grupo-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .tarjetas-badge {
+            background: var(--primary);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .tarjeta-grupo-items {
+            display: grid;
+            gap: 12px;
+        }
+
+        .tarjeta-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--bg-alt);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .tarjeta-numero {
+            background: var(--primary);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .tarjeta-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tarjeta-pregunta {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            min-width: 150px;
+            flex: 1;
+        }
+
+        .mostrado {
+            padding: 6px 12px;
+            background: #e0e7ff;
+            color: #4338ca;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .mostrado.secondary {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .audio-icon {
+            font-size: 1.2rem;
+        }
+
+        .solo-audio {
+            color: var(--text-light);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .tarjeta-respuesta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .arrow {
+            color: var(--text-light);
+            font-size: 1.5rem;
+        }
+
+        .requerido {
+            padding: 8px 16px;
+            background: var(--success);
+            color: white;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Responsive para móvil */
+        @media (max-width: 768px) {
+            .tarjeta-grupo {
+                padding: 16px;
+            }
+
+            .tarjeta-grupo-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .tarjeta-grupo-header .hanzi-lg {
+                font-size: 2rem;
+            }
+
+            .grupo-info {
+                width: 100%;
+            }
+
+            .tarjetas-badge {
+                align-self: flex-start;
+            }
+
+            .tarjeta-item {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 12px;
+            }
+
+            .tarjeta-content {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+                gap: 12px;
+            }
+
+            .tarjeta-pregunta {
+                width: 100%;
+            }
+
+            .tarjeta-respuesta {
+                width: 100%;
+            }
+
+            .arrow {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
 </body>
 </html>

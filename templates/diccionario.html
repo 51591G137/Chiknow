@@ -32,30 +32,50 @@
     </main>
 
     <nav class="bottom-nav">
-    <a href="/" class="nav-item">
-        <span class="nav-icon">3.0</span>
-        <span class="nav-label">HSK</span>
-    </a>
-    <a href="/diccionario" class="nav-item active">
-        <span class="nav-icon">📖</span>
-        <span class="nav-label">Diccionario</span>
-    </a>
-    <a href="/ejemplos" class="nav-item">
-        <span>💬</span>
-        <span class="nav-label">Ejemplos</span>
-    </a>
-    <a href="/tarjetas" class="nav-item">
-        <span>🗂️</span>
-        <span class="nav-label">Tarjetas</span>
-    </a>
-    <a href="/sm2" class="nav-item">
-        <span>🧠</span>
-        <span class="nav-label">Estudiar</span>
-    </a>
+        <a href="/" class="nav-item">
+            <span class="nav-icon">3.0</span>
+            <span class="nav-label">HSK</span>
+        </a>
+        <a href="/diccionario" class="nav-item active">
+            <span class="nav-icon">📖</span>
+            <span class="nav-label">Diccionario</span>
+        </a>
+        <a href="/ejemplos" class="nav-item">
+            <span>💬</span>
+            <span class="nav-label">Ejemplos</span>
+        </a>
+        <a href="/tarjetas" class="nav-item">
+            <span>🗂️</span>
+            <span class="nav-label">Tarjetas</span>
+        </a>
+        <a href="/sm2" class="nav-item">
+            <span>🧠</span>
+            <span class="nav-label">Estudiar</span>
+        </a>
     </nav>
+
+    <!-- Modal de Notas -->
+    <div id="modal-notas" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="cerrarNotas()">✕</span>
+            <h2>📝 Nota para <span id="nota-hanzi"></span></h2>
+            <textarea id="textarea-nota" 
+                      placeholder="Escribe tu nota aquí (mnemotecnia, contexto, observaciones...)&#10;&#10;Ejemplo: 'Se parece a una casa con techo'&#10;'Usar en contexto: 我喜欢你'&#10;'No confundir con 太 (demasiado)'"
+                      rows="8"></textarea>
+            <div class="modal-actions">
+                <button onclick="guardarNota()" class="btn btn-primary">
+                    💾 Guardar
+                </button>
+                <button onclick="eliminarNota()" class="btn btn-secondary">
+                    🗑️ Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let todasLasPalabras = [];
+        let notaActualHskId = null;
 
         async function cargarDiccionario() {
             try {
@@ -125,14 +145,28 @@
                             <span class="tarjetas-count">6 tarjetas</span>
                         </div>
                     </div>
-                    <button class="btn-remove" onclick="eliminar(${p.hsk_id})" title="Eliminar del diccionario">−</button>
+                    <div class="card-actions">
+                        <button class="btn-nota" onclick="abrirNotas(${p.hsk_id}, '${p.hanzi}')" title="Añadir/editar nota">
+                            📝
+                        </button>
+                        <button class="btn-remove" onclick="eliminar(${p.hsk_id})" title="Eliminar del diccionario">∓</button>
+                    </div>
                 </div>
             `).join('');
         }
 
         function reproducirAudio(texto) {
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(texto);
+                // Cancelar cualquier síntesis en curso
+                window.speechSynthesis.cancel();
+                
+                // Limpiar texto
+                const textoLimpio = texto
+                    .replace(/['"`,;:!?]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                
+                const utterance = new SpeechSynthesisUtterance(textoLimpio);
                 utterance.lang = 'zh-CN';
                 utterance.rate = 0.8;
                 window.speechSynthesis.speak(utterance);
@@ -164,6 +198,89 @@
             }
         }
 
+        // ========================================================================
+        // SISTEMA DE NOTAS
+        // ========================================================================
+
+        async function abrirNotas(hskId, hanzi) {
+            notaActualHskId = hskId;
+            document.getElementById('nota-hanzi').textContent = hanzi;
+            
+            // Cargar nota existente
+            try {
+                const res = await fetch(`/api/hsk/${hskId}/nota`);
+                const data = await res.json();
+                document.getElementById('textarea-nota').value = data.nota || '';
+            } catch (error) {
+                console.error('Error cargando nota:', error);
+                document.getElementById('textarea-nota').value = '';
+            }
+            
+            document.getElementById('modal-notas').classList.add('show');
+            
+            // Enfocar el textarea
+            setTimeout(() => {
+                document.getElementById('textarea-nota').focus();
+            }, 100);
+        }
+
+        function cerrarNotas() {
+            document.getElementById('modal-notas').classList.remove('show');
+            notaActualHskId = null;
+        }
+
+        async function guardarNota() {
+            const nota = document.getElementById('textarea-nota').value.trim();
+            
+            if (!nota) {
+                mostrarNotificacion('Escribe una nota primero', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/hsk/${notaActualHskId}/nota`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nota })
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    mostrarNotificacion(data.error, 'error');
+                } else {
+                    mostrarNotificacion('✓ Nota guardada', 'success');
+                    cerrarNotas();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarNotificacion('Error al guardar nota', 'error');
+            }
+        }
+
+        async function eliminarNota() {
+            if (!confirm('¿Eliminar esta nota?')) return;
+            
+            try {
+                const res = await fetch(`/api/hsk/${notaActualHskId}/nota`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    mostrarNotificacion(data.error, 'error');
+                } else {
+                    mostrarNotificacion('✓ Nota eliminada', 'success');
+                    document.getElementById('textarea-nota').value = '';
+                    cerrarNotas();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarNotificacion('Error al eliminar nota', 'error');
+            }
+        }
+
         function mostrarNotificacion(mensaje, tipo = 'info') {
             const notif = document.createElement('div');
             notif.className = `notificacion notificacion-${tipo}`;
@@ -189,6 +306,20 @@
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     buscarEnDiccionario(searchInput.value.trim());
+                }
+            });
+
+            // Cerrar modal al hacer clic fuera
+            document.getElementById('modal-notas').addEventListener('click', (e) => {
+                if (e.target.id === 'modal-notas') {
+                    cerrarNotas();
+                }
+            });
+
+            // Atajo de teclado ESC para cerrar modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    cerrarNotas();
                 }
             });
         });
