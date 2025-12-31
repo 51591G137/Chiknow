@@ -9,8 +9,8 @@
 <body>
 
     <header>
-        <h1 class="header-title">Algoritmo Sm2<span class="mobile-only"> - Repaso espaciado</span></h1>
-        <p class="subtitle desktop-only">Repaso espaciado inteligente (0-2)</p>
+        <h1>🧠 Sistema de Estudio SM2</h1>
+        <p class="subtitle">Repaso espaciado inteligente (0-2)</p>
     </header>
 
     <main id="content">
@@ -28,33 +28,45 @@
                 <div class="stat-value" id="stat-estudiadas">-</div>
                 <div class="stat-label">Total Estudiadas</div>
             </div>
-            <!-- SOLUCIÓN: Eliminado el cuarto cuadro que mostraba el texto en móvil -->
         </div>
 
         <!-- Área de estudio -->
         <div id="area-inicial" class="study-area">
-            <div class="initial-buttons-container">
+            <!-- Para escritorio -->
+            <div class="initial-buttons-container desktop-only">
                 <button onclick="iniciarEstudio()" class="btn btn-primary btn-large">
-                    📚 Iniciar sesión de estudio
+                    <span style="margin-right: 10px;">📘</span>
+                    Iniciar sesión de estudio
                 </button>
                 <button onclick="mostrarEstadisticasDetalladas()" class="btn btn-primary btn-large">
-                    📊 Ver Estadísticas
+                    <span style="margin-right: 10px;">📊</span>
+                    Ver Estadísticas
                 </button>
-                <!-- SOLUCIÓN: El texto de ayuda ahora está DENTRO del contenedor de botones en escritorio -->
-                <p class="help-text desktop-only">
-                    Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
+            </div>
+            
+            <!-- Texto de ayuda para escritorio -->
+            <p class="help-text desktop desktop-only">
+                Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
+            </p>
+            
+            <!-- Cuadro de ayuda para móvil -->
+            <div class="help-mobile-container mobile-only">
+                <p class="help-text">
+                    Sistema de repaso espaciado inteligente: cada tarjeta aparece en el momento óptimo para tu memoria
                 </p>
             </div>
-        </div>
-
-        <!-- Botones flotantes para móvil -->
-        <div class="floating-buttons mobile-only">
-            <button onclick="iniciarEstudio()" class="floating-btn floating-btn-primary" title="Iniciar sesión de estudio">
-                📚
-            </button>
-            <button onclick="mostrarEstadisticasDetalladas()" class="floating-btn floating-btn-secondary" title="Ver estadísticas">
-                📊
-            </button>
+            
+            <!-- Botones flotantes para móvil -->
+            <div class="mobile-floating-buttons mobile-only">
+                <button onclick="mostrarEstadisticasDetalladas()" class="btn-statistics">
+                    <span>📊</span>
+                    Ver Estadísticas
+                </button>
+                <button onclick="iniciarEstudio()" class="btn-start-study">
+                    <span>📘</span>
+                    Iniciar Estudio
+                </button>
+            </div>
         </div>
 
         <div id="area-estudio" class="study-area" style="display: none;">
