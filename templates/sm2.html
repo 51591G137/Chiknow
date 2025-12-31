@@ -33,38 +33,33 @@
         <!-- Área de estudio -->
         <div id="area-inicial" class="study-area">
             <!-- Para escritorio -->
-            <div class="initial-buttons-container desktop-only">
+         <div class="initial-buttons-container desktop-only">
                 <button onclick="iniciarEstudio()" class="btn btn-primary btn-large">
                     <span style="margin-right: 10px;">📘</span>
                     Iniciar sesión de estudio
-                </button>
-                <button onclick="mostrarEstadisticasDetalladas()" class="btn btn-primary btn-large">
-                    <span style="margin-right: 10px;">📊</span>
-                    Ver Estadísticas
+             </button>
+             <button onclick="mostrarEstadisticasDetalladas()" class="btn btn-primary btn-large">
+                  <span style="margin-right: 10px;">📊</span>
+                  Ver Estadísticas
                 </button>
             </div>
-            
+    
             <!-- Texto de ayuda para escritorio -->
             <p class="help-text desktop desktop-only">
                 Sistema de repaso espaciado: las tarjetas aparecerán en el momento óptimo para tu memoria
             </p>
-            
-            <!-- Cuadro de ayuda para móvil -->
-            <div class="help-mobile-container mobile-only">
-                <p class="help-text">
-                    Sistema de repaso espaciado inteligente: cada tarjeta aparece en el momento óptimo para tu memoria
-                </p>
-            </div>
-            
-            <!-- Botones flotantes para móvil -->
+    
+            <!-- Botones flotantes redondos para móvil -->
             <div class="mobile-floating-buttons mobile-only">
-                <button onclick="mostrarEstadisticasDetalladas()" class="btn-statistics">
-                    <span>📊</span>
-                    Ver Estadísticas
+                <button onclick="mostrarEstadisticasDetalladas()" 
+                        class="mobile-floating-btn mobile-floating-btn-statistics"
+                        title="Ver Estadísticas">
+                    📊
                 </button>
-                <button onclick="iniciarEstudio()" class="btn-start-study">
-                    <span>📘</span>
-                    Iniciar Estudio
+                <button onclick="iniciarEstudio()" 
+                        class="mobile-floating-btn mobile-floating-btn-study"
+                        title="Iniciar Estudio">
+                    📘
                 </button>
             </div>
         </div>
