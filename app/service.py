@@ -1,17 +1,24 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
-created_at = datetime.now(timezone.utc) 
-from . import repository
-from . import models
 import json
+import logging
+
+from . import repository, models
+from .decorators import transactional
+from .utils import now_utc
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # FUNCIONES DICCIONARIO
 # ============================================================================
 
+@transactional  # ✅ Manejo automático de transacciones
 def agregar_palabra_y_generar_tarjetas(db: Session, hsk_id: int):
+    """Agrega palabra al diccionario y genera 6 tarjetas"""
     palabra = repository.get_hsk_by_id(db, hsk_id)
     if not palabra:
+        logger.warning(f"Palabra HSK {hsk_id} no encontrada")
         return None
     
     # 1. Crear entrada en diccionario
@@ -41,23 +48,24 @@ def agregar_palabra_y_generar_tarjetas(db: Session, hsk_id: int):
         })
         repository.get_or_create_progress(db, tarjeta.id)
     
-    db.commit()
-    
     # 4. Verificar si este hanzi activa algún ejemplo
     verificar_y_activar_ejemplos(db)
     
+    logger.info(f"Palabra {hsk_id} agregada con 6 tarjetas")
     return True
 
+@transactional  # ✅ Manejo automático de transacciones
 def eliminar_palabra_y_tarjetas(db: Session, hsk_id: int):
     """Elimina una palabra del diccionario y todas sus tarjetas asociadas"""
     entrada = repository.get_diccionario_entry_by_hsk_id(db, hsk_id)
     if not entrada:
+        logger.warning(f"Palabra {hsk_id} no encontrada en diccionario")
         return False
     
     repository.delete_tarjetas_by_diccionario_id(db, entrada.id)
     repository.delete_diccionario_entry(db, entrada.id)
     
-    db.commit()
+    logger.info(f"Palabra {hsk_id} eliminada del diccionario")
     return True
 
 def obtener_diccionario_completo(db: Session):
@@ -101,7 +109,9 @@ def buscar_en_diccionario(db: Session, query: str):
     
     return resultado
 
+@transactional  # ✅ Manejo automático de transacciones
 def añadir_traduccion_alternativa(db: Session, hsk_id: int, traduccion: str):
+    """Añade una traducción alternativa a una palabra"""
     palabra = repository.get_hsk_by_id(db, hsk_id)
     
     if not palabra:
@@ -116,17 +126,18 @@ def añadir_traduccion_alternativa(db: Session, hsk_id: int, traduccion: str):
     # Añadir traducción
     nuevo_espanol = palabra.espanol + ", " + traduccion_limpia
     palabra.espanol = nuevo_espanol
-    db.commit()
     
     # Actualizar todas las tarjetas asociadas a esta palabra
     actualizar_tarjetas_por_hsk_id(db, hsk_id, nuevo_espanol)
     
+    logger.info(f"Traducción añadida a palabra {hsk_id}")
     return {
         "status": "ok",
         "message": "Traducción añadida",
         "espanol": nuevo_espanol
     }
 
+@transactional  # ✅ Manejo automático de transacciones
 def actualizar_tarjetas_por_hsk_id(db: Session, hsk_id: int, nuevo_requerido: str):
     """
     Actualiza el campo 'requerido' de todas las tarjetas asociadas a un hsk_id
@@ -149,12 +160,13 @@ def actualizar_tarjetas_por_hsk_id(db: Session, hsk_id: int, nuevo_requerido: st
             # Tarjeta de tipo: Audio → Español (requerido es español, actualizar)
             tarjeta.requerido = nuevo_requerido
     
-    db.commit()
+    logger.debug(f"Tarjetas actualizadas para HSK {hsk_id}")
 
 # ============================================================================
 # FUNCIONES EJEMPLOS
 # ============================================================================
 
+@transactional  # ✅ Manejo automático de transacciones
 def crear_ejemplo_completo(db: Session, hanzi: str, pinyin: str, espanol: str, 
                           hanzi_ids: list, nivel: int = 1, complejidad: int = 1):
     """
@@ -173,7 +185,7 @@ def crear_ejemplo_completo(db: Session, hanzi: str, pinyin: str, espanol: str,
     # 3. Verificar si debe activarse automáticamente
     verificar_y_activar_ejemplo_individual(db, ejemplo.id)
     
-    db.commit()
+    logger.info(f"Ejemplo creado: {hanzi} (ID: {ejemplo.id})")
     return ejemplo
 
 def verificar_y_activar_ejemplos(db: Session):
@@ -210,10 +222,12 @@ def verificar_y_activar_ejemplo_individual(db: Session, ejemplo_id: int):
     # Si todos están dominados, activar el ejemplo
     if todos_dominados:
         repository.activar_ejemplo(db, ejemplo_id, "hanzi_dominados", hanzi_ids)
+        logger.info(f"Ejemplo {ejemplo_id} activado automáticamente")
         return True
     
     return False
 
+@transactional  # ✅ Manejo automático de transacciones
 def añadir_ejemplo_a_estudio(db: Session, ejemplo_id: int):
     """
     Añade un ejemplo al estudio del usuario (genera tarjetas)
@@ -248,13 +262,13 @@ def añadir_ejemplo_a_estudio(db: Session, ejemplo_id: int):
         })
         repository.get_or_create_progress(db, tarjeta.id)
     
-    db.commit()
-    
     # Verificar jerarquía y desactivar tarjetas de hanzi si procede
     gestionar_desactivacion_por_ejemplo(db, ejemplo_id)
     
+    logger.info(f"Ejemplo {ejemplo_id} añadido al estudio")
     return {"status": "ok", "message": "Ejemplo añadido al estudio"}
 
+@transactional  # ✅ Manejo automático de transacciones
 def gestionar_desactivacion_por_ejemplo(db: Session, ejemplo_id: int):
     """
     Cuando un ejemplo está dominado, desactiva las tarjetas de sus hanzi componentes
@@ -286,6 +300,8 @@ def gestionar_desactivacion_por_ejemplo(db: Session, ejemplo_id: int):
         ).all()
         for tarjeta in tarjetas_simple:
             repository.desactivar_tarjeta(db, tarjeta.id)
+    
+    logger.info(f"Desactivación gestionada para ejemplo {ejemplo_id}")
 
 def esta_ejemplo_dominado(db: Session, ejemplo_id: int):
     """
@@ -305,6 +321,7 @@ def esta_ejemplo_dominado(db: Session, ejemplo_id: int):
     
     return True
 
+@transactional  # ✅ Manejo automático de transacciones
 def reactivar_hanzi_desde_ejemplo(db: Session, ejemplo_id: int, hanzi_fallados: list):
     """
     Reactiva las tarjetas de hanzi específicos que fallaron en un ejemplo
@@ -333,11 +350,11 @@ def reactivar_hanzi_desde_ejemplo(db: Session, ejemplo_id: int, hanzi_fallados: 
                         easiness=2.5, 
                         repetitions=0, 
                         interval=0,
-                        next_review=datetime.utcnow(),
+                        next_review=now_utc(),  # ✅ FIX: Timezone consistente
                         estado="aprendiendo"
                     )
     
-    db.commit()
+    logger.info(f"Hanzi reactivados desde ejemplo {ejemplo_id}: {hanzi_fallados}")
 
 def obtener_ejemplos_disponibles(db: Session):
     """Obtiene ejemplos activados que el usuario puede añadir"""
@@ -389,6 +406,7 @@ def obtener_ejemplos_en_estudio(db: Session):
     return resultado
 
 def obtener_todos_ejemplos(db: Session):
+    """Obtiene todos los ejemplos"""
     ejemplos = db.query(models.Ejemplo).all()
     
     resultado = []
@@ -416,6 +434,7 @@ def obtener_todos_ejemplos(db: Session):
     return resultado
 
 def obtener_ejemplos_por_hanzi(db: Session, hsk_id: int):
+    """Obtiene ejemplos que contienen un hanzi específico"""
     relaciones = db.query(models.HSKEjemplo, models.Ejemplo).join(
         models.Ejemplo, models.HSKEjemplo.ejemplo_id == models.Ejemplo.id
     ).filter(
@@ -552,6 +571,7 @@ def calcular_sm2_simplificado(quality: int, easiness: float, repetitions: int, i
 def iniciar_sesion_estudio(db: Session):
     """Inicia una nueva sesión de estudio"""
     session = repository.create_sm2_session(db)
+    logger.info(f"Sesión SM2 iniciada: {session.id}")
     return {
         "session_id": session.id,
         "fecha_inicio": session.fecha_inicio.isoformat()
@@ -608,8 +628,10 @@ def obtener_tarjetas_para_estudiar(db: Session, limite: int = 20):
                 "proxima_revision": progress.next_review.isoformat() if progress else None
             })
     
+    logger.debug(f"Devueltas {len(resultado)} tarjetas para estudiar")
     return resultado
 
+@transactional  # ✅ Manejo automático de transacciones
 def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: int,
                       hanzi_fallados: list = None, frase_fallada: bool = False,
                       respuesta_usuario: str = None):
@@ -630,6 +652,7 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
     ).first()
     
     if not tarjeta:
+        logger.warning(f"Tarjeta {tarjeta_id} no encontrada")
         return {"error": "Tarjeta no encontrada"}
     
     progress = repository.get_or_create_progress(db, tarjeta_id)
@@ -646,7 +669,7 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
     )
     
     # Calcular fecha de próxima revisión
-    next_review = datetime.now(timezone.utc) + timedelta(days=new_interval)
+    next_review = now_utc() + timedelta(days=new_interval)  # ✅ FIX: Timezone consistente
     
     # Actualizar progreso
     repository.update_progress(db, tarjeta_id, new_easiness, new_repetitions, 
@@ -678,6 +701,8 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
     if tarjeta.hsk_id and new_estado in ['dominada', 'madura']:
         verificar_y_activar_ejemplos(db)
     
+    logger.info(f"Respuesta procesada - Tarjeta: {tarjeta_id}, Quality: {quality}, Nuevo estado: {new_estado}")
+    
     return {
         "success": True,
         "nueva_facilidad": round(new_easiness, 2),
@@ -687,6 +712,7 @@ def procesar_respuesta(db: Session, tarjeta_id: int, session_id: int, quality: i
         "es_correcta": is_correct
     }
 
+@transactional  # ✅ Manejo automático de transacciones
 def finalizar_sesion_estudio(db: Session, session_id: int):
     """Finaliza una sesión de estudio y calcula estadísticas"""
     reviews = repository.get_reviews_by_session(db, session_id)
@@ -696,6 +722,8 @@ def finalizar_sesion_estudio(db: Session, session_id: int):
     incorrectas = estudiadas - correctas
     
     session = repository.update_sm2_session(db, session_id, estudiadas, correctas, incorrectas)
+    
+    logger.info(f"Sesión {session_id} finalizada: {estudiadas} tarjetas ({correctas} correctas)")
     
     return {
         "session_id": session_id,
